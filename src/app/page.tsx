@@ -10,7 +10,7 @@ import HackathonsSection from "@/components/section/hackathons-section";
 import ProjectsSection from "@/components/section/projects-section";
 import WorkSection from "@/components/section/work-section";
 import WritingSection from "@/components/section/writing-section";
-import { ArrowUpRight, MapPin, Sparkles } from "lucide-react";
+import { ArrowUpRight, Download, FileText, MapPin, Sparkles } from "lucide-react";
 
 const BLUR_FADE_DELAY = 0.015;
 
@@ -47,13 +47,31 @@ export default function Page() {
                   <span>{DATA.location}</span>
                 </div>
               </BlurFade>
+              <BlurFade delay={BLUR_FADE_DELAY * 2.8}>
+                <div className="flex items-center gap-2.5 pt-1.5">
+                  <Link
+                    href="/resume"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+                  >
+                    <FileText className="size-3.5" />
+                    <span>View Resume</span>
+                  </Link>
+                  <a
+                    href="/Shubhr_Gunjan_Resume.pdf"
+                    download="Shubhr_Gunjan_Resume.pdf"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-card/60 hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-all"
+                  >
+                    <Download className="size-3.5" />
+                    <span>Download PDF</span>
+                  </a>
+                </div>
+              </BlurFade>
             </div>
             <BlurFade delay={BLUR_FADE_DELAY} className="order-1 md:order-2 shrink-0">
               <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full blur opacity-30 group-hover:opacity-70 transition duration-500"></div>
                 <Avatar className="relative size-24 md:size-32 border-2 border-background rounded-full shadow-xl ring-2 ring-border/50">
-                  <AvatarImage alt={DATA.name} src={DATA.avatarUrl} className="object-cover" />
-                  <AvatarFallback>{DATA.initials}</AvatarFallback>
+                  <img alt={DATA.name} src={DATA.avatarUrl} className="aspect-square size-full object-cover rounded-full" />
                 </Avatar>
               </div>
             </BlurFade>

@@ -1,0 +1,222 @@
+%-------------------------
+% Resume in Latex (Jake's Resume Format)
+% Author : Shubhr Gunjan
+% Based on: https://github.com/jakegut/resume
+% License : MIT
+%-------------------------
+
+\documentclass[letterpaper,10pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-5pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-4pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    \textbf{\Huge \scshape Shubhr Gunjan} \\ \vspace{2pt}
+    \small Delhi NCR / Bihar, India $|$ 
+    \href{mailto:shubhrrgunjan@gmail.com}{\underline{shubhrrgunjan@gmail.com}} $|$ 
+    \href{https://github.com/shubhrgunjan}{\underline{github.com/shubhrgunjan}} $|$ 
+    \href{https://linkedin.com/in/shubhr-gunjan-6748802b0}{\underline{linkedin.com/in/shubhr-gunjan}} $|$ 
+    \href{https://quora.com/profile/Shubhr-Gunjan}{\underline{quora.com/profile/Shubhr-Gunjan}}
+\end{center}
+
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Bachelor of Technology (B.Tech) in Electronics \& Communication Engineering}{2024 -- 2028}
+      {Relevant Coursework: DSP, Embedded Systems, Microprocessors, DSA, Computer Architecture}{India}
+    \resumeSubheading
+      {University of Helsinki (MOOC.fi)}{2026}
+      {Java Programming I \& II Certification -- Passed with Distinction}{Helsinki, Finland (Remote)}
+  \resumeSubHeadingListEnd
+
+
+%-----------TECHNICAL SKILLS-----------
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: Python, Java, C++, TypeScript, JavaScript, SQL, Bash} \\
+     \textbf{Robotics \& Simulation}{: MuJoCo Physics Engine, MJCF Modeling, Three.js / WebGL, Forward/Inverse Kinematics, Teleoperation Protocols, PPO Reinforcement Learning (mjlab)} \\
+     \textbf{AI \& Edge Systems}{: Qdrant Vector Database, FastEmbed, Retrieval-Augmented Generation (RAG), Gemini API, DuckDB, Redis Streams \& Pub/Sub, Docker, Linux Mint / Ubuntu} \\
+     \textbf{Web \& Mobile}{: React, Next.js (App Router), React Native / Expo, Node.js, FastAPI, Tailwind CSS, PostgreSQL}
+    }}
+ \end{itemize}
+
+
+%-----------EXPERIENCE-----------
+\section{Experience \& Research}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {OpenHorizon Labs \& Autonomous Systems}{Aug 2026 -- Present}
+      {Humanoid Robotics \& Simulation Software Engineer}{Open Source / Remote}
+      \resumeItemListStart
+        \resumeItem{Architected \textbf{VASIMOV}, an open-source MuJoCo simulation digital twin for the Menlo Asimov 1 humanoid robot, enabling \textbf{60 FPS} browser WebGL visualization with \textbf{$<$15ms network latency} by streaming binary joint-state transforms over WebSockets.}
+        \resumeItem{Engineered a proprioceptive policy inference pipeline converting a \textbf{78-dimensional observation vector} (quaternions, 6-axis IMU, joint encoders) into \textbf{23 joint actuator target angles} at \textbf{50 Hz} using NumPy and Python.}
+        \resumeItem{Developed the \textbf{Asimov 3D Web \& Mobile Teleoperation Suite} using React Native/Expo and Three.js, bypassing React reconciler overhead to sustain real-time 16ms telemetry stream and live joint-limit monitoring.}
+      \resumeItemListEnd
+      
+    \resumeSubheading
+      {EdgeMed Memory Lab (Code Cubicle 6.0 Hackathon)}{Sep 2026 -- Oct 2026}
+      {AI Systems Architect -- Problem Statement PS03 (Edge Intelligence)}{Hybrid / Virtual}
+      \resumeItemListStart
+        \resumeItem{Designed an air-gapped synthetic clinical memory vault executing on-device local semantic vector search with \textbf{zero external cloud API leakage}, delivering \textbf{sub-120ms retrieval latency} on resource-constrained hardware.}
+        \resumeItem{Engineered multi-tenant ingestion pipelines embedding synthetic EHR notes into a local \textbf{Qdrant} vector store, implementing AES-256 payload encryption and role-based access verification.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {AndroPlay Systems}{Sep 2026 -- Present}
+      {Distributed Display Systems Engineer}{Remote}
+      \resumeItemListStart
+        \resumeItem{Engineered a zero-lag digital signage engine for the LG CreateBoard (TR3DK, Android 13) using \textbf{Redis Streams} and BLE, achieving \textbf{$<$20ms dual-standby playback synchronization} from mobile and web controllers.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {The Artful Eye (Quora Publication)}{2023 -- Present}
+      {Creator, Curator \& Tooling Developer}{quora.com/profile/Shubhr-Gunjan}
+      \resumeItemListStart
+        \resumeItem{Curated and authored essays on architectural geometry, lighting physics, and human spatial cognition, amassing thousands of readers; engineered \textbf{QuoraFormatter} browser extension to automate typography and layout structuring.}
+      \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+
+
+%-----------PROJECTS-----------
+\section{Featured Projects}
+    \resumeSubHeadingListStart
+      \resumeProjectHeading
+          {\textbf{Nyaya Flow -- AI Legal Navigation System} $|$ \emph{TypeScript, React Native / Expo, Gemini, Gnani.ai STT}}{Sep 2026}
+          \resumeItemListStart
+            \resumeItem{Built a voice-first multilingual civic assistance platform translating citizen grievances into source-backed legal action steps; \textbf{officially shortlisted as a Finalist at the Build in AI for India Delhi Edition hackathon}.}
+            \resumeItem{Integrated Google Gemini structured reasoning with Gnani.ai speech recognition models, handling noisy real-world audio inputs with \textbf{94\%+ intent classification accuracy} across Indian regional languages.}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{UIKey -- Universal UI/UX Extraction \& AST Token Compiler} $|$ \emph{TypeScript, Plasmo Extension, AST, Next.js}}{Oct 2026}
+          \resumeItemListStart
+            \resumeItem{Engineered a browser extraction engine and AST compiler that extracts computed styles, bounding boxes, and design tokens into hyper-compact JSON manifests, slashing prompt token overhead for LLM code generators by \textbf{65\%}.}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{ExelSnap -- Offline Desktop Spreadsheet AI} $|$ \emph{Electron, React, DuckDB, SheetJS, Local LLM}}{Oct 2026}
+          \resumeItemListStart
+            \resumeItem{Created a desktop application executing natural-language SQL queries over large Excel and CSV workbooks using embedded \textbf{DuckDB}, preserving \textbf{100\% offline data privacy} with zero cloud transmission.}
+          \resumeItemListEnd
+    \resumeSubHeadingListEnd
+
+
+%-----------HONORS & AWARDS-----------
+\section{Honors \& Accolades}
+    \resumeSubHeadingListStart
+      \resumeProjectHeading
+          {\textbf{Shortlisted Finalist Developer} $|$ \emph{Build in AI for India (Delhi Edition) -- Nyaya Flow (Gnani.ai, PW IOI)}}{Sep 2026}
+          \resumeItemListStart
+            \resumeItem{Selected among top engineering teams across India for building state-of-the-art civic voice intelligence.}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Hackathon Finalist} $|$ \emph{Code Cubicle 6.0 -- EdgeMed Memory Lab (PS03 Edge Intelligence)}}{Sep 2026}
+          \resumeItemListStart
+            \resumeItem{Recognized for engineering air-gapped, zero-leakage vector search pipelines for sensitive edge healthcare environments.}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Certificate of Distinction} $|$ \emph{University of Helsinki -- Java Programming I \& II (MOOC.fi)}}{2026}
+          \resumeItemListStart
+            \resumeItem{Certified with full distinction in advanced OOP, stream processing, recursive algorithms, and modular design.}
+          \resumeItemListEnd
+    \resumeSubHeadingListEnd
+
+%-------------------------------------------
+\end{document}

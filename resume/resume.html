@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shubhr Gunjan — Resume</title>
+  <style>
+    @page {
+      size: letter;
+      margin: 0.34in 0.44in 0.34in 0.44in;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Times New Roman', Times, Georgia, serif;
+      color: #0f172a;
+      background-color: #ffffff;
+      font-size: 9.1pt;
+      line-height: 1.26;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    h1 {
+      font-size: 19pt;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #020617;
+      margin-bottom: 2px;
+      line-height: 1.1;
+    }
+    .contact-links {
+      font-size: 8.8pt;
+      color: #334155;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 5px;
+      line-height: 1.2;
+    }
+    .contact-links a {
+      color: #020617;
+      text-decoration: none;
+    }
+    .contact-links a:hover {
+      text-decoration: underline;
+    }
+    .sep {
+      color: #64748b;
+    }
+    /* Section Headings */
+    .section-title {
+      font-size: 10.2pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #020617;
+      border-bottom: 1px solid #0f172a;
+      padding-bottom: 1px;
+      margin-top: 5px;
+      margin-bottom: 3px;
+    }
+    /* Entry Rows */
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 9.2pt;
+    }
+    .entry-left-bold {
+      font-weight: 700;
+      color: #020617;
+    }
+    .entry-right {
+      font-size: 8.7pt;
+      color: #0f172a;
+      font-weight: 600;
+      text-align: right;
+    }
+    .entry-subheader {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 8.7pt;
+      margin-bottom: 1.5px;
+    }
+    .entry-left-italic {
+      font-style: italic;
+      color: #334155;
+    }
+    .entry-right-italic {
+      font-style: italic;
+      font-size: 8.4pt;
+      color: #475569;
+    }
+    .entry-right-italic a {
+      color: #020617;
+      text-decoration: none;
+    }
+    .entry-right-italic a:hover {
+      text-decoration: underline;
+    }
+    /* Bullets */
+    ul {
+      list-style-type: disc;
+      margin-left: 15px;
+      margin-bottom: 3px;
+    }
+    li {
+      margin-bottom: 1.5px;
+      text-align: justify;
+      color: #1e293b;
+    }
+    li strong {
+      color: #020617;
+    }
+    /* Skills list */
+    .skills-line {
+      font-size: 8.8pt;
+      margin-bottom: 1.5px;
+      line-height: 1.25;
+    }
+    .skills-line strong {
+      color: #020617;
+    }
+    /* Honors */
+    .honor-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 8.8pt;
+      margin-bottom: 1.5px;
+    }
+    .honor-item strong {
+      color: #020617;
+    }
+    @media print {
+      body {
+        background: transparent;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Shubhr Gunjan</h1>
+      <div class="contact-links">
+        <span>Delhi NCR / Bihar, India</span>
+        <span class="sep">•</span>
+        <a href="mailto:shubhrrgunjan@gmail.com">shubhrrgunjan@gmail.com</a>
+        <span class="sep">•</span>
+        <a href="https://github.com/shubhrgunjan" target="_blank">github.com/shubhrgunjan</a>
+        <span class="sep">•</span>
+        <a href="https://www.linkedin.com/in/shubhr-gunjan-6748802b0/" target="_blank">linkedin.com/in/shubhr-gunjan-6748802b0</a>
+        <span class="sep">•</span>
+        <a href="https://www.quora.com/profile/Shubhr-Gunjan" target="_blank">quora.com/profile/Shubhr-Gunjan</a>
+      </div>
+    </header>
+
+    <!-- EDUCATION -->
+    <div class="section-title">Education</div>
+    
+    <div class="entry-header">
+      <span class="entry-left-bold">Bachelor of Technology (B.Tech) in Electronics & Communication Engineering</span>
+      <span class="entry-right">2024 – 2028</span>
+    </div>
+    <div class="entry-subheader">
+      <span class="entry-left-italic">Relevant Coursework: Digital Signal Processing, Embedded Systems, Microprocessors, DSA, Computer Architecture</span>
+      <span class="entry-right-italic">India</span>
+    </div>
+
+    <div class="entry-header" style="margin-top: 2px;">
+      <span class="entry-left-bold">University of Helsinki (MOOC.fi)</span>
+      <span class="entry-right">2026</span>
+    </div>
+    <div class="entry-subheader">
+      <span class="entry-left-italic">Java Programming I & II Certification — Passed with Distinction</span>
+      <span class="entry-right-italic">Helsinki, Finland (Remote)</span>
+    </div>
+
+    <!-- TECHNICAL SKILLS -->
+    <div class="section-title">Technical Skills</div>
+    <div class="skills-line">
+      <strong>Languages:</strong> Python, Java, C++, TypeScript, JavaScript, SQL, Bash
+    </div>
+    <div class="skills-line">
+      <strong>Robotics & Simulation:</strong> MuJoCo Physics Engine, MJCF Modeling, Three.js / WebGL, Forward/Inverse Kinematics, Teleoperation Protocols, PPO Reinforcement Learning (mjlab)
+    </div>
+    <div class="skills-line">
+      <strong>AI & Systems:</strong> Qdrant Vector Database, FastEmbed, Retrieval-Augmented Generation (RAG), Gemini API, DuckDB, Redis Streams & Pub/Sub, Docker, Linux Mint / Ubuntu
+    </div>
+    <div class="skills-line">
+      <strong>Web & Mobile:</strong> React, Next.js (App Router), React Native / Expo, Node.js, FastAPI, Tailwind CSS, PostgreSQL
+    </div>
+
+    <!-- EXPERIENCE & RESEARCH -->
+    <div class="section-title">Experience & Research</div>
+
+    <!-- Job 1 -->
+    <div class="entry-header">
+      <span class="entry-left-bold">OpenHorizon Labs & Autonomous Systems</span>
+      <span class="entry-right">Aug 2026 – Present</span>
+    </div>
+    <div class="entry-subheader">
+      <span class="entry-left-italic">Humanoid Robotics & Simulation Software Engineer</span>
+      <span class="entry-right-italic">Open Source / Remote</span>
+    </div>
+    <ul>
+      <li>Architected <strong>VASIMOV</strong>, an open-source MuJoCo simulation digital twin for the Menlo Asimov 1 humanoid robot, enabling <strong>60 FPS</strong> browser WebGL visualization with <strong>&lt;15ms network latency</strong> by streaming binary joint-state transforms over WebSockets.</li>
+      <li>Engineered a proprioceptive policy inference pipeline converting a <strong>78-dimensional observation vector</strong> (quaternions, 6-axis IMU, joint encoders) into <strong>23 joint actuator target angles</strong> at <strong>50 Hz</strong> using NumPy and Python.</li>
+      <li>Developed the <strong>Asimov 3D Web & Mobile Teleoperation Suite</strong> using React Native/Expo and Three.js, bypassing React reconciler overhead to sustain real-time 16ms telemetry stream and live joint-limit monitoring.</li>
+    </ul>
+
+    <!-- Job 2 -->
+    <div class="entry-header">
+      <span class="entry-left-bold">EdgeMed Memory Lab (Code Cubicle 6.0 Hackathon)</span>
+      <span class="entry-right">Sep 2026 – Oct 2026</span>
+    </div>
+    <div class="entry-subheader">
+      <span class="entry-left-italic">AI Systems Architect — Problem Statement PS03 (Edge Intelligence)</span>
+      <span class="entry-right-italic">Hybrid / Virtual</span>
+    </div>
+    <ul>
+      <li>Designed an air-gapped synthetic clinical memory vault executing on-device local semantic vector search with <strong>zero external cloud API leakage</strong>, delivering <strong>sub-120ms retrieval latency</strong> on resource-constrained hardware.</li>
+      <li>Engineered multi-tenant ingestion pipelines embedding synthetic EHR notes into a local <strong>Qdrant</strong> vector store, implementing AES-256 payload encryption and role-based access verification.</li>
+    </ul>
+
+    <!-- Job 3 -->
+    <div class="entry-header">
+      <span class="entry-left-bold">AndroPlay Systems</span>
+      <span class="entry-right">Sep 2026 – Present</span>
+    </div>
+    <div class="entry-subheader">
+      <span class="entry-left-italic">Distributed Display Systems Engineer</span>
+      <span class="entry-right-italic">Remote</span>
+    </div>
+    <ul>
+      <li>Engineered a zero-lag digital signage engine for the LG CreateBoard (TR3DK, Android 13) using <strong>Redis Streams</strong> and BLE, achieving <strong>&lt;20ms dual-standby playback synchronization</strong> from mobile and web controllers.</li>
+    </ul>
+
+    <!-- Job 4 -->
+    <div class="entry-header">
+      <span class="entry-left-bold">The Artful Eye (Quora Publication)</span>
+      <span class="entry-right">2023 – Present</span>
+    </div>
+    <div class="entry-subheader">
+      <span class="entry-left-italic">Creator, Curator & Tooling Developer</span>
+      <span class="entry-right-italic">quora.com/profile/Shubhr-Gunjan</span>
+    </div>
+    <ul>
+      <li>Curated and authored essays on architectural geometry, lighting physics, and human spatial cognition, amassing thousands of readers; engineered <strong>QuoraFormatter</strong> browser extension to automate typography and layout structuring.</li>
+    </ul>
+
+    <!-- PROJECTS -->
+    <div class="section-title">Featured Projects</div>
+
+    <!-- Project 1 -->
+    <div class="entry-header">
+      <span class="entry-left-bold">Nyaya Flow — AI Legal Navigation System</span>
+      <span class="entry-right">Sep 2026</span>
+    </div>
+    <div class="entry-subheader">
+      <span class="entry-left-italic">TypeScript, React Native / Expo, Google Gemini, Gnani.ai STT, Firebase</span>
+      <span class="entry-right-italic"><a href="https://shubhrgunjan.github.io/nyaya-flow/" target="_blank">shubhrgunjan.github.io/nyaya-flow</a></span>
+    </div>
+    <ul>
+      <li>Built a voice-first multilingual civic assistance platform translating citizen grievances into source-backed legal action steps; <strong>officially shortlisted as a Finalist at the Build in AI for India Delhi Edition hackathon</strong>.</li>
+      <li>Integrated Google Gemini structured reasoning with Gnani.ai speech recognition models, handling noisy real-world audio inputs with <strong>94%+ intent classification accuracy</strong> across Indian regional languages.</li>
+    </ul>
+
+    <!-- Project 2 -->
+    <div class="entry-header">
+      <span class="entry-left-bold">UIKey — Universal UI/UX Extraction & AST Token Compiler</span>
+      <span class="entry-right">Oct 2026</span>
+    </div>
+    <div class="entry-subheader">
+      <span class="entry-left-italic">TypeScript, Plasmo Browser Extension, Node.js AST, Next.js</span>
+      <span class="entry-right-italic"><a href="https://github.com/shubhrgunjan/uikey" target="_blank">github.com/shubhrgunjan/uikey</a></span>
+    </div>
+    <ul>
+      <li>Engineered a browser extraction engine and AST compiler that extracts computed styles, bounding boxes, and design tokens into hyper-compact JSON manifests, slashing prompt token overhead for LLM code generators by <strong>65%</strong>.</li>
+    </ul>
+
+    <!-- Project 3 -->
+    <div class="entry-header">
+      <span class="entry-left-bold">ExelSnap — Offline Desktop Spreadsheet AI</span>
+      <span class="entry-right">Oct 2026</span>
+    </div>
+    <div class="entry-subheader">
+      <span class="entry-left-italic">Electron, React, DuckDB, SheetJS, Local LLM</span>
+      <span class="entry-right-italic"><a href="https://github.com/shubhrgunjan/ExelSnap" target="_blank">github.com/shubhrgunjan/ExelSnap</a></span>
+    </div>
+    <ul>
+      <li>Created a desktop application executing natural-language SQL queries over large Excel and CSV workbooks using embedded <strong>DuckDB</strong>, preserving <strong>100% offline data privacy</strong> with zero cloud transmission.</li>
+    </ul>
+
+    <!-- HONORS & AWARDS -->
+    <div class="section-title">Honors & Accolades</div>
+    <div class="honor-item">
+      <span><strong>Shortlisted Finalist Developer:</strong> <em>Build in AI for India</em> (Delhi Edition) — Nyaya Flow (Gnani.ai, PW IOI, StartupNews.fyi)</span>
+      <span class="entry-right">Sep 2026</span>
+    </div>
+    <div class="honor-item">
+      <span><strong>Hackathon Finalist:</strong> <em>Code Cubicle 6.0</em> — EdgeMed Memory Lab (Problem Statement PS03 Edge Intelligence)</span>
+      <span class="entry-right">Sep 2026</span>
+    </div>
+    <div class="honor-item">
+      <span><strong>Certificate of Distinction:</strong> <em>University of Helsinki</em> — Java Programming I & II (MOOC.fi)</span>
+      <span class="entry-right">2026</span>
+    </div>
+
+  </div>
+</body>
+</html>
