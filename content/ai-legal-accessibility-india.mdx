@@ -1,0 +1,37 @@
+---
+title: "Nyaya Flow: Making Legal Action Pathways Accessible Across Indian Languages"
+publishedAt: "2026-09-14"
+updatedAt: "2026-09-16"
+author: "Shubhr Gunjan"
+summary: "Combining Google Gemini reasoning with Gnani.ai speech recognition to turn complex Indian administrative hurdles into clear, source-backed roadmaps."
+image: "/projects/nyaya-flow.svg"
+---
+
+In India, navigating civil rights, consumer disputes, tenancy laws, or government grievance mechanisms is rarely a question of willingness — it is a problem of legal jargon and linguistic barriers.
+
+At the **Build in AI for India Hackathon (Delhi Edition)**, we built **Nyaya Flow** to solve this: allowing a person to speak their problem in their everyday native language and receive an immediate, actionable, step-by-step roadmap grounded in verified legal statutes.
+
+## The Technical Pipeline
+
+Nyaya Flow brings together three key technologies:
+
+1. **Gnani.ai Speech Recognition**: Accepts spoken vernacular voice inputs (Hindi, English, regional dialects), transcribing raw audio even in noisy environments.
+2. **Context Formulation & Legal Extraction**: Identifies the fundamental dispute type (e.g. unlawful eviction, non-refund of deposit, consumer grievance).
+3. **Structured Action Schema (Google Gemini)**: Formats the legal guidance into four distinct, non-ambiguous phases:
+   - Immediate documentation to gather (receipts, notices, agreements)
+   - Pre-litigation formal communications (legal notice drafts)
+   - Relevant statutory bodies or online portals (e.g., e-Daakhil, RERA, National Consumer Helpline)
+   - Escalation procedures and legal aid clinics.
+
+```typescript
+// Sample action pathway generation contract
+interface LegalActionRoadmap {
+  disputeCategory: string;
+  relevantActs: string[];
+  immediateSteps: { stepNumber: number; action: string; requiredDocuments: string[] }[];
+  officialPortals: { name: string; url: string; freeOfCost: boolean }[];
+  statutoryNoticeDraftTemplate?: string;
+}
+```
+
+By ensuring that every step is source-backed and explicitly transparent about legal boundaries, Nyaya Flow bridges the gap between everyday citizens and institutional justice.

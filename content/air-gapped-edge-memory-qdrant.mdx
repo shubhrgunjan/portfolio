@@ -1,0 +1,37 @@
+---
+title: "Zero-Cloud Edge Intelligence: Building Synthetic Vector Memory Vaults"
+publishedAt: "2026-09-29"
+updatedAt: "2026-10-02"
+author: "Shubhr Gunjan"
+summary: "Designing EdgeMed — local-first semantic retrieval, encrypted storage vaults, and offline LLM query loops for privacy-critical environments."
+image: "/projects/edgemed.webp"
+---
+
+Most modern AI architectures assume continuous, high-bandwidth cloud connectivity. But what happens in disaster zones, secure clinical facilities, or air-gapped field research where internet egress is either impossible or strictly forbidden?
+
+For **Code Cubicle 6.0 (PS03)**, we designed **EdgeMed**: a synthetic-data-only intelligence vault engineered to run completely offline without ever transmitting a single byte outside the local perimeter.
+
+## The Architecture of Isolation
+
+EdgeMed decouples the semantic retrieval engine into three self-contained layers:
+
+1. **Encrypted Observation Vault**: Files and notes are encrypted on disk with AES-256-GCM. The encryption key never leaves system memory.
+2. **Local Vector Engine (Qdrant)**: Embeddings are generated on-device and indexed into an embedded Qdrant instance bound strictly to localhost.
+3. **LAN Access Control & Mutual TLS**: Staff accessing the portal over the facility’s Wi-Fi or LAN authenticate through role-based access tokens with strict sensitivity labels (`SENSITIVE` vs `HIGHLY_SENSITIVE`).
+
+```python
+# Encrypted on-device retrieval pattern
+from qdrant_client import QdrantClient
+
+client = QdrantClient(path="./vault/vector_db")
+results = client.search(
+    collection_name="clinical_observations",
+    query_vector=local_embedder.encode(user_prompt),
+    limit=5,
+    query_filter=build_sensitivity_filter(staff_role)
+)
+```
+
+## Eliminating Cloud Hallucination
+
+Because the system operates under clinical simulation guidelines, EdgeMed adheres to a strict verifiable provenance rule: every returned answer must directly cite the exact encrypted document chunk and sentence offset where the data was located. If no matching vector passes the similarity threshold, the model explicitly acknowledges the absence of evidence rather than hallucinating plausible medical details.

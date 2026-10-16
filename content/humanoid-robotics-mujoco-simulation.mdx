@@ -1,0 +1,43 @@
+---
+title: "Physics-Grounded Humanoid Simulation: From MuJoCo MJCF to Real-Time WebGL Teleoperation"
+publishedAt: "2026-10-08"
+updatedAt: "2026-10-10"
+author: "Shubhr Gunjan"
+summary: "Architecting VASIMOV — bridging 78-observation locomotion policy inference, wire protocols, and sub-16ms 3D rendering for the Menlo Asimov 1 humanoid."
+image: "/projects/vasimov.webp"
+---
+
+When simulating bipedal humanoids, the gap between abstract mathematical kinematics and physical stability is razor-thin. For the Menlo Asimov 1 humanoid robot, realistic testing requires zero compromises on collision geometry, actuator latency, and contact friction.
+
+## Why MuJoCo for Humanoid Physics?
+
+MuJoCo (Multi-Joint dynamics with Contact) excels at resolving convex contact dynamics and tendon constraints with high numerical fidelity. In building **VASIMOV**, our primary goal was to provide an exact digital twin that obeys the official Asimov wire protocol while streaming live ground-truth telemetry.
+
+### The 78-to-23 Policy Pipeline
+
+The official Asimov 1 locomotion policy consumes a 78-dimensional observation vector at 50 Hz:
+
+- Base orientation quaternion and angular velocity
+- Simulated 6-axis IMU acceleration readings
+- 25 joint positions and joint angular velocities
+- History buffer of previous target actions
+
+The neural network outputs 23 PD actuator target angles, mapped through torque limits to the robot's high-torque brushless DC joints.
+
+```python
+# Simplified excerpt from vasimov.core.telemetry
+def step_policy_inference(model, data, policy_session):
+    obs = extract_78d_observation(data)
+    action_targets = policy_session.run(None, {"observation": obs})[0]
+    apply_pd_targets(data, action_targets, kp=120.0, kd=5.0)
+    mujoco.mj_step(model, data)
+```
+
+## Bridging MuJoCo to the Browser
+
+While MuJoCo runs natively in C/Python, operators need fluid, browser-based inspection. Rather than streaming heavy video frames, **VASIMOV** streams lightweight binary joint state vectors over WebSockets. A Three.js client decodes the kinematic transform tree directly on the client GPU, delivering 60 FPS visualization with sub-15ms network latency.
+
+This architecture enables:
+1. **Interactive joint overrides**: Operators can inject manual joint biases while the underlying walking policy maintains base balance.
+2. **Procedural obstacle stress-testing**: Spawning steps, slopes, and randomized friction patches on the fly.
+3. **Flight Data Recording (FDR)**: Replaying joint slip incidents frame-by-frame for post-mortem analysis.
