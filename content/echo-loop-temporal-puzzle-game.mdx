@@ -1,0 +1,159 @@
+---
+title: "ECHO//LOOP: Building a Time-Loop Puzzle Game Where Your Past Self Is Your Coworker"
+publishedAt: "2026-09-25"
+author: "Shubhr Gunjan"
+summary: "A minimalist top-down puzzle game in vanilla JavaScript and Canvas 2D, where every rewind leaves behind an Echo that replays exactly what you did. This post covers the fixed-timestep loop and the record and replay design that keeps those Echoes deterministic."
+kicker: "Game Dev / Deterministic Simulation"
+tags: ["game-dev", "javascript", "canvas", "web-audio", "determinism"]
+accent: "violet"
+featured: 10
+repo: "https://github.com/shubhrgunjan/echo-loop"
+image: "/projects/echoloop.webp"
+---
+
+The pitch for **ECHO//LOOP** fits on one line from the README: *you are not playing against the game, you are playing with everything you have already done.*
+
+You control a glowing node in a test facility full of pressure switches and laser doors. There's one move that matters, <Kbd>R</Kbd>. Pressing it rewinds time to the start of the level, and your previous run becomes a translucent **Echo** that replays exactly what you did. Stand on a switch, rewind, and your past self holds the door open while you walk through. Later levels need two, three or four generations of yourself working together.
+
+It's pure vanilla JS: ES modules, Canvas 2D, and the Web Audio API, with Vite as the only (dev) dependency. Everything here is about one property: **an Echo has to do exactly what you did, every time, on every machine.**
+
+<StatGrid>
+  <Stat value="60 Hz" label="fixed simulation rate" />
+  <Stat value="8" label="handcrafted levels" />
+  <Stat value="0" label="runtime dependencies" />
+  <Stat value="~2.9k" label="lines of JS across 20 modules" />
+</StatGrid>
+
+## Step one: decouple simulation from the display
+
+Echoes are indexed by **tick**, so a tick has to mean the same thing everywhere. If the simulation advanced once per `requestAnimationFrame`, a 144 Hz monitor would run the game more than twice as fast as a 60 Hz one, and a recording made on one wouldn't line up with switches on the other. So `GameLoop.js` uses a fixed-timestep accumulator:
+
+```js title="src/core/GameLoop.js"
+loop(currentTime) {
+  let delta = currentTime - this.lastTime;
+  this.lastTime = currentTime;
+
+  // Guard against spiral of death on tab freeze
+  if (delta > 250) delta = 250;
+
+  this.accumulator += delta;
+  while (this.accumulator >= this.fixedStep) {
+    this.onUpdate(FIXED_DT);           // always 1/60 s
+    this.accumulator -= this.fixedStep;
+  }
+  this.onRender(this.accumulator / this.fixedStep);
+  this.rafId = requestAnimationFrame(this.loop);
+}
+```
+
+Real time goes into the accumulator, and the simulation consumes it in exact `1/60` s steps. A 120 Hz display renders twice per update. A slow frame runs two updates to catch up. The 250 ms clamp stops a backgrounded tab from coming back and trying to simulate ten seconds at once. Player speed (`220 px/s`) is always multiplied by the same `FIXED_DT`, so one tick moves the same distance everywhere.
+
+## Step two: record *state*, not inputs
+
+There are two classic ways to build replays:
+
+<Columns>
+  <Column title="Record inputs" tone="ink">
+    Store the keys pressed on each tick, then re-simulate the Echo through physics. Uses very little memory, but the replay is only correct if the world reacts exactly the same way it did during recording.
+  </Column>
+  <Column title="Record snapshots" tone="pink">
+    Store the resolved position on each tick, then just play it back. Uses more memory, but it **cannot diverge**, because nothing gets re-simulated.
+  </Column>
+</Columns>
+
+For this game, input replay has a real problem. The world **does not** react the same way between timelines. In run 1 a door was closed. In run 2 an Echo is holding it open. An input-replayed Echo would hit (or miss) different walls than it did when it was you, drift a few pixels, and miss the switch it's supposed to hold. Even small changes compound fast in a puzzle like this.
+
+So ECHO//LOOP records **snapshots**. After the player moves and collision is resolved, `ReplaySystem.recordTick` stores the player's resolved state:
+
+```js title="src/entities/Player.js"
+getState(tick) {
+  return {
+    t: tick,
+    x: this.x, y: this.y,
+    vx: this.vx, vy: this.vy,
+    rot: this.rotation,
+    isMoving: this.isMoving
+  };
+}
+```
+
+Pressing <Kbd>R</Kbd> freezes that buffer into an immutable track (a shallow copy of each frame), creates a new `Echo` from it, rewinds **every** existing Echo to frame 0, resets the player to spawn, and resets the global tick to 0:
+
+```js title="src/systems/ReplaySystem.js"
+triggerReset(player, spawnPoint) {
+  if (this.activeRecording.length > 0) {
+    const track = this.activeRecording.map(frame => ({ ...frame }));
+    this.echoes.push(new Echo(track, this.echoes.length));
+  }
+  for (const echo of this.echoes) echo.rewind();
+  if (player && spawnPoint) player.reset(spawnPoint.x, spawnPoint.y);
+  this.activeRecording = [];
+  this.iteration++;
+  return { iteration: this.iteration, echoCount: this.echoes.length };
+}
+```
+
+Playback is just an array lookup. On tick `n`, an Echo takes `track[n]`. That's the whole replay engine, and it's why I'm confident the Echoes are deterministic: **their position is a pure function of the tick**. Nothing you do in the current timeline can push an Echo off its path.
+
+## The anchor rule: where puzzles come from
+
+What happens when an Echo runs out of recording? It **stays where it ended**. Past the end of its track, the Echo holds its last frame indefinitely and pulses a beacon ring every 1.2 s:
+
+```js title="src/entities/Echo.js"
+} else {
+  // Reached the end of the recorded sequence; hold final position as ANCHOR BEACON
+  const lastFrame = this.track[this.track.length - 1];
+  if (lastFrame) { this.x = lastFrame.x; this.y = lastFrame.y; this.vx = 0; this.vy = 0; }
+  this.isFinished = true;
+}
+```
+
+Almost every puzzle is built on this one rule. Since you press <Kbd>R</Kbd> *where you're standing*, the place you rewind from is the place your Echo ends up holding. Level 01, *The First Anchor*, teaches exactly that: walk onto `GATE_01`, press <Kbd>R</Kbd>, and that Echo holds the switch forever. Level 03, *Relay Cascade*, chains it: Echo 1 opens Vault 1, then in timeline 2 you go into Vault 1 and end your run on `RELAY_2`, and so on deeper into the level. Each generation leaves another anchor behind.
+
+## One tick, in order
+
+The update order inside `Game.update` matters as much as the data structure. Each tick is:
+
+<Pipeline>
+  <Step title="Player moves" sub="input → velocity → walls">Collision against walls and closed doors.</Step>
+  <Step title="Record" sub="recordTick(tick)">The resolved state goes into the buffer.</Step>
+  <Step title="Echoes replay" sub="track[tick]">Every generation snaps to its frame.</Step>
+  <Step title="Switches" sub="player + all echoes">Pressed if any body overlaps.</Step>
+  <Step title="Doors" sub="ALL required switches">Solid while openProgress &lt; 0.75.</Step>
+  <Step title="Exit check" sub="player only">Then tick++.</Step>
+</Pipeline>
+
+Some details I like here:
+
+- **Switches don't care who presses them.** `Switch.update` gets `[player, ...echoes]` and checks circle overlap with `this.radius + entity.radius * 0.85`. The player and every Echo count equally.
+- **Doors use AND logic.** A door opens only when *all* of its `requiredSwitches` are pressed. That's how Level 02 (*Synchronicity*) forces an Echo and the live player to hold two nodes at the same time.
+- **Doors stay solid for a short moment after opening.** `getWallRect()` keeps a door in the collision list until its open animation reaches 75%, which takes about 10 ticks at the configured speed. That stops you from slipping through a door that's visibly still closed.
+- **Only the live player can trigger the exit.** Echoes can hold doors open, but they can't finish the level for you.
+
+### Echoes ignore walls, on purpose
+
+Echoes never run through `CollisionSystem`. They don't need to, because every frame they replay was already collision-resolved when it was recorded. A side effect is that an Echo can pass straight through a door that's closed *in the current timeline*. I left that in deliberately. If Echoes could be blocked, the game would need paradox rules (what happens when your past self gets stuck?), and the "pure function of the tick" guarantee would be gone. Echoes are ghosts: they act on the world through switches, but the world never pushes back on them.
+
+<Callout type="insight" title="Where randomness is allowed">
+`Math.random()` does appear in the code, but only for presentation: Echo ripples, particle bursts, screen shake, the white-noise burst in the rewind sound, and the starting pulse phase of switches and doors. None of it affects position, switch state or door state, so it can never cause a replay to drift.
+</Callout>
+
+## Collision for the live player
+
+The player is a circle (radius 16) and walls are axis-aligned rectangles. `resolveCircleRect` finds the closest point on each rectangle and pushes the circle out along that normal by the overlap. If the centre ended up inside the rectangle, it pushes out through the nearest edge instead. `resolveEntityWalls` runs **two passes** over all walls, because resolving one wall in a corner can push you into the other, and then clamps to the level bounds. Since closed doors are just rectangles appended to the wall list each tick (`getActiveWalls`), doors needed no special-case collision code.
+
+## Sound with no audio files
+
+All audio is synthesized at runtime with Web Audio: a 55 Hz sine drone through a 140 Hz low-pass filter for the background hum, plus generated chirps for switches, an unlatch sound for doors, a rewind drop and a level-complete arpeggio. <Kbd>M</Kbd> mutes it. The `AudioContext` is only created (or resumed) when you click into a sector from the landing page, because browsers block audio until the user interacts.
+
+## How it was built
+
+The whole game went from first commit to a playable 8-level release on **25 September 2026**. I built it with an AI-assisted workflow and kept the full prompt log in the repo (`AI_DEVELOPMENT_PROMPTS.md`) next to a concept spec PDF. The milestones were the loop, collision and replay first, then switches, doors and the exit, then levels, audio and the landing page. The two non-negotiable requirements from the first prompt were a fixed 60 Hz simulation that runs independently of the display rate, and replay of recorded states. Everything else was built on top of those two.
+
+Things I'd still change:
+
+- The render callback receives an interpolation `alpha`, but the renderer doesn't use it yet, so movement on high-refresh displays steps at 60 Hz instead of being interpolated.
+- Tracks grow by one object per tick with no cap. That's fine for rooms you can clear in a minute, but long sessions would benefit from a compact typed-array encoding.
+- Par (2 to 5 timelines per level) only splits clears into two ratings, ★★★ at or under par and ★★☆ above it. A timer or a per-generation score would give replays more reason to optimize.
+
+<RepoCard repo="shubhrgunjan/echo-loop" description="ECHO//LOOP: a minimalist top-down temporal puzzle game where your past becomes your coworker." />

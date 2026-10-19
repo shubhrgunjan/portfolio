@@ -1,0 +1,181 @@
+---
+title: "AndroPlay: Zero-Lag Playback on an LG CreateBoard, Controlled From a Phone"
+publishedAt: "2026-10-12"
+author: "Shubhr Gunjan"
+summary: "One Android app with two roles: a board that pre-syncs everything and plays from local storage with a warm standby player, and a phone that controls it over BLE in the room or Redis pub/sub from anywhere."
+kicker: "Android / Real-Time Sync"
+tags: ["android", "kotlin", "exoplayer", "redis", "ble"]
+accent: "orange"
+featured: 6
+image: "/projects/androplay.webp"
+---
+
+Our lab has an **LG CreateBoard** (model TR3DK, Android 13), a large interactive display that gets used for demos and presentations. In practice, presenting on it went like this: someone walks up, finds the file, opens a player, waits for it to buffer, fumbles the next file, and the room watches a loading spinner on a very large screen.
+
+I wanted nobody to have to touch the board at all. You'd pick something on your phone, and it would just appear on the screen. That's **AndroPlay**: one Android app with two roles, built over about three days of heavy iteration (v0.1 to v0.8.7).
+
+<Callout type="note" title="Private repo">
+  The source is private because it's tied to our lab's infrastructure, so there's no repo link here. Every snippet below is a real excerpt from it, with nothing deployment-specific included.
+</Callout>
+
+## The idea: nothing is ever fetched at play time
+
+The key decision is that **the board never streams.** Every piece of content is downloaded to the board's local storage ahead of time, so pressing play just opens a local file. The network is used only for small, latency-sensitive messages (commands and state) and for background bulk transfer that the presentation never waits on.
+
+That splits the system into four parts:
+
+<Pipeline>
+  <Step title="Admin phone" sub="upload + remote">Compose UI, WorkManager queue</Step>
+  <Step title="Object storage" sub="S3-compatible">Original bytes, multipart</Step>
+  <Step title="Cloud Redis" sub="the nervous system">Metadata, streams, pub/sub, state</Step>
+  <Step title="Board" sub="CreateBoard, Android 13">Local cache, two ExoPlayers, BLE server</Step>
+</Pipeline>
+
+Redis is good at small, hot, real-time data and bad at multi-GB video, which costs a lot to keep in memory and runs into value-size limits on hosted plans. So file bytes go to S3-compatible object storage, and Redis holds the coordination data:
+
+| Data | Lives in | Why |
+|---|---|---|
+| Content metadata, slideshows | Redis hashes / sorted set | Atomic updates, fast reads |
+| "Added / removed / updated" events | Redis **Stream** | Durable, so an offline board resumes from its cursor |
+| Play / pause / seek | Redis **pub/sub**, one channel per board | Fire-and-forget, lowest latency |
+| Live playback state | Redis key + pub/sub | Phones see position and status live |
+| File bytes | S3-compatible bucket | Resumable multipart, ranged GET |
+| The copy that actually plays | Board local storage | No network on the play path |
+
+The storage client is a small hand-written SigV4 implementation that works with Cloudflare R2 (the default in the design), AWS S3, MinIO and Backblaze B2. It also supports fallback buckets: reads try each bucket in turn, and writes go to all of them. More on why that exists further down.
+
+## One APK, two roles
+
+On first launch the app asks **Board** or **Admin** and remembers the answer. Shipping one APK means one build, one signing key, one update channel, and one shared protocol module that both sides compile against.
+
+<Columns>
+  <Column title="Board role" tone="ink">
+    A foreground service holds a TLS connection to Redis, sends a heartbeat, consumes the event stream, downloads content one file at a time, and runs the player. It starts on boot and can optionally act as the home launcher (kiosk mode).
+  </Column>
+  <Column title="Admin role" tone="paper">
+    Library grid with per-board sync badges, a resumable upload queue, slideshow editing with drag and drop, a board picker driven by heartbeats, and a remote bar for play/pause, seek, next/prev and volume.
+  </Column>
+</Columns>
+
+## Instant switching: two players, one surface
+
+Starting a local file is already fast. Switching between items is where you normally see a black frame. `PlayerEngine` keeps **two ExoPlayer instances**: `active` owns the screen, and `standby` already has the *next* queue item prepared and paused. When that item is requested, the engine swaps which player is attached to the view instead of starting a new load:
+
+```kotlin title="app/src/main/java/app/androplay/board/PlayerEngine.kt"
+standbyHandle == item.handle -> {
+    val old = active
+    active = standby
+    standby = old
+    standbyHandle = PlaybackState.NO_HANDLE
+    old.stop()
+    old.clearMediaItems()
+    view?.player = active
+    if (startMs > 0) active.seekTo(startMs)
+}
+```
+
+Both players use a load control tuned for local files: playback starts once **250 ms** is buffered, and seeks snap to the closest sync frame. Images get the same treatment through a 192 MB `LruCache` of bitmaps decoded at the panel's resolution on a dedicated thread, so the next slide is usually already in memory. After every `open()` the engine calls `preloadNext()`, which looks at the queue (or the running slideshow) and warms whatever comes next.
+
+The engine lives in the `Application`, not the `Activity`, so both players stay warm across activity restarts.
+
+## Commands: one tiny binary codec, two transports
+
+Every remote action is a `Command`, and the shared `protocol/` module encodes it as a one-byte opcode followed by a little-endian payload. Play is 7 bytes. Pause is 1 byte. The same bytes travel over BLE or, base64-encoded, over Redis pub/sub, and both paths end at the same `dispatch()` on the board.
+
+```kotlin title="protocol/src/main/kotlin/app/androplay/protocol/Command.kt"
+fun Command.encode(): ByteArray = when (this) {
+    is Command.Play -> frame(OP_PLAY, 6) { putShort(handle.toShort()); putInt(start) }
+    Command.Pause -> frame(OP_PAUSE)
+    is Command.Seek -> frame(OP_SEEK, 4) { putInt(positionMs) }
+    is Command.Volume -> frame(OP_VOLUME, 1) { put(percent.coerceIn(0, 100).toByte()) }
+    ...
+}
+```
+
+Content is referred to by a 16-bit **handle** rather than its full ID, which keeps commands small enough for a single BLE write. Going the other way, `PlaybackState` (status, handle, position, duration, volume, mute, lock and slideshow flags, manifest version) packs into exactly **20 bytes**, which is one BLE notification.
+
+<StatGrid>
+  <Stat value="17" label="command opcodes" />
+  <Stat value="20 bytes" label="playback state, one BLE notification" />
+  <Stat value="2 MiB" label="max bytes read to fingerprint any file" />
+  <Stat value="5 s / 15 s" label="heartbeat interval / online TTL" />
+</StatGrid>
+
+### BLE first, Redis as fallback
+
+In the room, the phone connects to a GATT server on the board and writes commands **without waiting for a response**. If BLE isn't ready, or a command won't fit in the negotiated MTU, `send()` returns false and the phone falls back to Redis pub/sub:
+
+```kotlin title="app/src/main/java/app/androplay/admin/AdminRepository.kt"
+suspend fun send(cmd: Command): Boolean {
+    if (ble.send(cmd)) return true
+    val b = backend ?: return false
+    val board = selectedId.value ?: return false
+    return withContext(Dispatchers.IO) { runCatching { b.publishCommand(board, cmd) }.isSuccess }
+}
+```
+
+Leaving a BLE command channel open on a board in a shared room would be a bad idea, so a connection has to write an `Auth` command with the board's token first. The board publishes that token in its Redis heartbeat, so only phones that can already reach the backend can control it locally. Until a device authenticates, every other write gets `GATT_WRITE_NOT_PERMITTED`.
+
+<Callout type="insight" title="On latency numbers">
+  The architecture doc has a latency budget: about 10–30 ms for a BLE command, 20–60 ms for Redis pub/sub in the same region, under 50 ms to start a preloaded item. Those are **design targets**, not measurements. I haven't built an instrumented end-to-end benchmark yet, so I'm not going to present them as results.
+</Callout>
+
+## Sync that survives a board being switched off
+
+The board is often powered off or offline, so sync has to handle that. The board-side loop has three layers:
+
+1. **Event stream.** Uploads end with an `XADD` to the events stream (trimmed with `MAXLEN ~10000`). The board blocks on `XREAD` on a dedicated connection, so a long block never holds up normal commands.
+2. **Cursor before reconcile.** On every (re)connect the board records the stream's latest ID *before* doing a full reconcile, so no event can fall into the gap between the two.
+3. **Periodic full reconcile.** Every 5 minutes, and on start, the board compares the full content set against its local store. That covers missed events and a trimmed stream.
+
+Downloads resume from `.part` files using HTTP Range, retry with exponential backoff capped at 30 s, and are checked before anything plays. The content ID itself is the integrity check:
+
+```kotlin title="protocol/src/main/kotlin/app/androplay/protocol/Fingerprint.kt"
+/**
+ * Fast content id: SHA-256 over (size, first 1 MiB, last 1 MiB), truncated to 128 bits.
+ * Reads at most 2 MiB regardless of file size, so multi-GB videos are identified instantly
+ * on both the phone and the board.
+ */
+```
+
+That one decision does three jobs. The same file uploaded twice dedupes automatically. A resumed download knows exactly which object it's resuming. And a corrupted or truncated file fails the fingerprint check and gets deleted instead of played. The trade-off is that the fingerprint samples the head and tail rather than hashing the whole file. Integrity of the middle of the file relies on the S3 side: every request is SigV4-signed over its payload hash.
+
+Files already on the board (USB drives, Downloads, Movies) are fingerprinted and registered too, so a phone can play them. The reconcile step is careful never to delete a file the board owns just because the backend forgot about it.
+
+## Not lagging during a presentation
+
+A CreateBoard is not a fast device, and background downloads compete with video decoding. Two pieces of code deal with that.
+
+**Downloads yield to the screen.** While something is playing, download throughput is capped at about **6 MB/s** and the download thread runs at background priority. If lag was detected recently, downloads stop completely.
+
+**`PerformanceGuard` watches for lag and reacts.** It listens for ExoPlayer dropped-frame batches (10 or more in a batch counts as visible stutter), mid-playback buffering on a *local* file (which means the device is struggling), UI jank via a `Choreographer` frame callback (8 or more frames over about 2.5 vsyncs in a 2 s window), and low memory. On any of those it frees the image cache, kills other apps' background processes, and quiets AndroPlay's own background work for **90 s**. It also clears background apps just before each Play, at most once every two minutes.
+
+There's a hard limit on this, and the README states it: without root, an app can't kill foreground services, system apps or LG's own processes, and can't override the firmware's power settings. Those have to be turned off once in the board's settings or disabled via `adb`.
+
+A `ScreenKeeper` holds a wake lock while anything is showing. With the `adb` grants from the setup guide, it also turns off the screen saver and stretches the screen timeout, then restores the original settings when the board goes idle.
+
+## What broke, and what changed because of it
+
+The commit history from those three days reads like a list of things that went wrong:
+
+- **Storage download caps.** The lab ended up on a bucket provider with a download cap, and boards stopped receiving content and app updates once it was hit. The fix had three parts: fallback buckets (reads fail over, writes mirror to every bucket), a clear error message naming the cap instead of a generic 403, and a **LAN path**. The board runs a small HTTP server on the local network, advertised over NSD and protected by the same token, so a phone on the same Wi-Fi or hotspot can push files straight to the board and pull thumbnails from it when cloud storage refuses.
+- **Scope cut: PDFs, documents and audio.** The first version pre-rendered PDF pages with `PdfRenderer`, had a go-to-page command, and handed Office documents to external viewer apps. I removed the PDF, document and audio content types from the protocol, and the app now blocks PDF and PPT at the picker, the share sheet and the upload queue. It handles images and video only, and handles them well. (The README still mentions PDFs. The code is the source of truth here.)
+- **Pasted credentials.** People pasted whole `redis-cli --tls -u ...` lines and S3 endpoints with duplicated schemes into the config fields. The parsers now pull the URL out of whatever was pasted and force TLS where the host requires it.
+- **Self-updates without an app store.** Release APKs are published to the bucket and announced through a Redis event. Phones show an update banner. Boards install automatically, but **only when nothing is on screen**. The release script refuses to publish an APK signed with anything other than the pinned certificate.
+
+## Slideshows
+
+The most-used feature turned out to be slideshows: an ordered list of images and videos where videos play to the end and images stay up for a set time. Slideshows can contain other slideshows. On the phone they get flattened (with cycle detection) into a single `Slideshow` command that carries **per-slide timing**, so a nested show keeps its own image duration. On the board, a slide that fails to open is skipped after 1.5 s instead of stopping the show. Pause, seek and next/prev all work on a timed still image, because the engine tracks elapsed time for each slide.
+
+Bluetooth HID remotes and presenter clickers also work: their media keys and Page Up/Down go to the same `dispatch()`, so you can run a show with a <Kbd>Page Down</Kbd> clicker and never pick up your phone.
+
+## What's next
+
+<Window title="Honest status (v0.8.7)" tone="paper">
+  - **Credentials.** v1 keeps the backend credentials on trusted lab devices. The planned fix is a small auth API that gives out per-device Redis ACL users and presigned URLs, so phones don't hold master keys.
+  - **Hardening.** Storage quota and eviction on the board, crash-safe state, CI builds and proper release signing are listed as the next phase in the plan.
+  - **Measurement.** Instrument command-to-first-frame latency over BLE and over Redis, so the latency budget becomes measured numbers.
+  - **Tests.** The pure-Kotlin protocol module has unit tests for the codec. The Android side was tested by hand on the actual board, not automatically.
+</Window>
+
+The lesson I keep coming back to: **"zero lag" mostly isn't about a fast network.** It's about setting things up so the network isn't on the critical path at all. Pre-sync everything, keep the next item warm, make commands tiny, and give every transport a fallback.

@@ -1,0 +1,229 @@
+---
+title: "UIKey: Compiling a Live Website into a Prompt an LLM Can Actually Use"
+publishedAt: "2026-10-10"
+author: "Shubhr Gunjan"
+summary: "A browser extension, a design-token compiler and a pseudo-JSX formatter that turn any page's computed styles and geometry into a compact UI manifest for AI code generators, plus an honest look at what is still scaffolding."
+kicker: "Dev Tools / LLM Context"
+tags: ["browser-extension", "plasmo", "design-tokens", "llm", "nextjs", "monorepo"]
+accent: "lime"
+featured: 4
+repo: "https://github.com/shubhrgunjan/UIKey"
+---
+
+Every time I asked an AI code generator to "make it look like that site", I got the same thing back: a generic card grid with `rounded-lg` and `bg-blue-500`. The model had no idea what "that site" looked like. My options were to describe it in a wall of prose, or paste the page's HTML, which is mostly tracking scripts, SVG paths and utility-class soup that burns the context window and still says nothing about what the browser actually *rendered*.
+
+**UIKey** is my attempt at a third option. A browser extension walks the live DOM, reads computed styles and bounding boxes, and hands the result to a small compiler that pulls out design tokens and rewrites the tree as compact pseudo-JSX. The output is a short text manifest, a "UI Key", that you can paste into any LLM or drop into your repo as context for an agentic editor.
+
+I built it in a two-day sprint (9 to 10 October 2026, 46 commits) as a monorepo. This post walks through the extraction core, which is the part I'm proudest of, and is upfront about which of the many surfaces around it are real and which are still scaffolds.
+
+## The idea: rendered truth, not source
+
+The key decision was to extract from the **rendered page**, not from the source. Source HTML lies in all the interesting ways: a Tailwind class like `p-4` means nothing without the config, CSS variables resolve at runtime, and half the layout comes from a stylesheet three imports away. `window.getComputedStyle()` and `getBoundingClientRect()` don't care how the CSS was authored. They give you the final colour as `rgb(...)`, the final padding in pixels and the final box on screen.
+
+That gives a pipeline with clean seams:
+
+<Pipeline>
+  <Step title="Content script" sub="Plasmo, all URLs">Walks the DOM, reads computed styles and geometry.</Step>
+  <Step title="Ingest API" sub="Next.js + Prisma">Stores the tree, mints a 6-char key.</Step>
+  <Step title="Token compiler" sub="packages/extractor">Dedupes colours and font sizes into named tokens.</Step>
+  <Step title="Prompt formatter" sub="pseudo-JSX">Rewrites the tree with token references.</Step>
+  <Step title="CLI / VS Code" sub="consumers">Writes .uikey/context.md and a .cursorrules hint.</Step>
+</Pipeline>
+
+<StatGrid>
+  <Stat value="4" label="apps (extension, web, VS Code, Figma)" />
+  <Stat value="15" label="workspace packages" />
+  <Stat value="10" label="target-framework generators" />
+  <Stat value="46" label="commits over two days" />
+</StatGrid>
+
+## Extraction: one recursive walk
+
+The heart of the system is `extractDOM` in `packages/extractor`. It is a single recursive function: for each element it captures tag, id, classes, all attributes, the full bounding rect, a handful of computed style properties, and its direct text, then recurses into element children.
+
+```ts title="packages/extractor/src/index.ts"
+export function extractDOM(rootNode: HTMLElement): ExtractedNode {
+  const rect = rootNode.getBoundingClientRect();
+  const computedStyle = window.getComputedStyle(rootNode);
+  // ...attributes copied verbatim...
+  const nodeData: ExtractedNode = {
+    tagName: rootNode.tagName.toLowerCase(),
+    id: rootNode.id,
+    className: rootNode.className,
+    attributes,
+    geometry: { x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+                top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left },
+    styles: {
+      backgroundColor: computedStyle.backgroundColor,
+      color: computedStyle.color,
+      padding: computedStyle.padding,
+      fontSize: computedStyle.fontSize,
+    },
+    children: [],
+  };
+  // ...accessibility checks, then recurse over childNodes...
+}
+```
+
+Text handling is deliberately simple: only `TEXT_NODE` children directly under an element are concatenated into that element's `text`, so a button's label lands on the button and not on its wrapper div.
+
+The browser side is tiny. The Plasmo content script matches `<all_urls>`, listens for one message, and runs the walk on `document.body`:
+
+```ts title="apps/extension/src/content.ts"
+export const config: PlasmoCSConfig = {
+  matches: ["<all_urls>"]
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "EXTRACT_UI") {
+    try {
+      const domData = extractDOM(document.body)
+      sendResponse({ success: true, uiKey: JSON.stringify(domData, null, 2) })
+    } catch (e) {
+      sendResponse({ success: false, uiKey: String(e) })
+    }
+  }
+})
+```
+
+The popup is a React component with a single <Mark>Extract Current Site</Mark> button. It messages the active tab, POSTs the JSON to the ingest route, and shows the returned `uikey.dev/k/...` link with a copy button. Plasmo earned its place here: Manifest V3 boilerplate, hot reload and a React popup for free, which matters a lot when you only have two days.
+
+### Accessibility, for free
+
+Since the walk already has every element's attributes and colours in hand, I bolted on a cheap audit. Each node can carry an `accessibility` block that flags:
+
+- `img` elements with no `alt` attribute,
+- `input` / `textarea` / `select` with no `aria-label`, `aria-labelledby` or `title`, and buttons or links with no label *and* no text,
+- foreground/background pairs below a **4.5:1** WCAG contrast ratio, computed with the standard relative-luminance formula.
+
+The reasoning: if the manifest is going to teach an LLM how to rebuild a UI, it should not teach it to rebuild the accessibility bugs too.
+
+## Compiling tokens
+
+Raw computed styles are repetitive. A page might have 400 nodes and six actual colours. `generateDesignTokens` walks the tree once, collects every distinct `color`, `backgroundColor` and `fontSize` into sets, and numbers them:
+
+```ts title="packages/extractor/src/compiler.ts"
+let colorIndex = 1;
+for (const color of colorSet) {
+  designSystem.colors[`color-${colorIndex++}`] = color;
+}
+
+let fontIndex = 1;
+for (const font of fontSet) {
+  designSystem.fonts[`size-${fontIndex++}`] = font;
+}
+```
+
+Before formatting, `sanitizeDOMTree` drops `script`, `style` and `svg` subtrees entirely. SVG was the hardest call. Icons matter visually, but path data is enormous and an LLM can't do anything useful with a 2 KB `d` attribute. Dropping it was the single biggest size win.
+
+<Callout type="note" title="Naming is the honest gap">
+  The README promises semantic names like `--color-primary`. The code today produces positional names: `color-1`, `color-2`, `size-1`. Inferring that a colour is "primary" needs frequency, area and role heuristics (is it on buttons? on links? on large backgrounds?). The geometry to do that is already captured; the heuristic isn't written yet.
+</Callout>
+
+## Formatting for a model, not a browser
+
+The last stage, `generateAIPrompt`, is where the size actually collapses. It emits a markdown header with the token table, then rewrites the tree as indented pseudo-JSX where every style value is replaced by a reference to its token through a reverse lookup map. Transparent backgrounds and zero padding are omitted.
+
+```ts title="packages/extractor/src/formatter.ts"
+const bg = node.styles.backgroundColor;
+if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+  attrs += ` bg="${reverseColorMap[bg] || bg}"`;
+}
+// ...same for color, padding (p=), fontSize (fs=)
+```
+
+So a red button with white text comes out as something like this, which is exactly what the Jest pipeline test in `packages/extractor/tests/pipeline.test.ts` asserts against:
+
+```text title="UI Key (excerpt)"
+# UI DESIGN SYSTEM INSTRUCTIONS
+Adopt the following design tokens when generating UI components.
+
+# Design Tokens
+## Colors
+- color-1: rgb(255, 0, 0)
+- color-2: rgb(255, 255, 255)
+## Fonts
+- size-1: 16px
+
+# UI Layout
+<div id="root" ...>
+  <button bg="color-1" color="color-2" p="10px 20px" fs="size-1">Click Me</button>
+</div>
+```
+
+Why pseudo-JSX and not JSON? Two reasons. Models have seen far more JSX than any bespoke schema, so they read nesting and attributes natively. And JSON repeats every key on every node (`"backgroundColor":`, `"children":`), while short attribute names like `bg`, `p` and `fs` cost a token or two each.
+
+| Representation | What the model sees per node |
+|---|---|
+| Raw HTML | class soup, inline scripts, SVG paths, no rendered values |
+| Extracted JSON | every key repeated, full geometry, all attributes |
+| UI Key pseudo-JSX | tag, token refs, padding, text |
+
+## Storing and sharing keys
+
+`apps/web` is a Next.js app with a Prisma model that's about as small as it can be:
+
+```prisma title="apps/web/prisma/schema.prisma"
+model UIComponent {
+  id        String   @id @default(cuid())
+  shortId   String   @unique
+  payload   String
+  userId    String?
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+```
+
+`POST /api/ingest` generates a 6-character hex `shortId` from `crypto.randomBytes`, stores the payload, attaches the NextAuth user's email if signed in, and returns `uikey.dev/k/<id>`. `GET /api/k/[id]` serves it back as plain text, and `PATCH`/`PUT` on `/api/keys/[id]` let the owner flip `isPublic` (which feeds an explore page) or edit the payload. The PATCH and PUT handlers check the session email against `userId` and return 403 otherwise.
+
+The web app also has a visual token editor at `/k/[id]/edit`, and I swapped `next dev` for a custom `server.js` that mounts Socket.IO next to Next.js. It relays two events, `cursor-move` and `token-update`, so two people on the same key see each other's cursors and edits. It's a broadcast relay with no conflict resolution, but it was a fun hour.
+
+## Getting keys into the editor
+
+A key is only useful if it reaches the place where code gets generated. There are two consumers.
+
+<Columns>
+  <Column title="uikey CLI" tone="ink">
+    An interactive `inquirer` menu: fetch a key by id, or list local keys. Fetched keys are saved to `.uikey/<id>.md` in the current directory and summarised in a `cli-table3` table. `docs/install.sh` clones the repo and `npm link`s it, because it isn't on npm yet.
+  </Column>
+  <Column title="VS Code extension" tone="sky">
+    One command, `uikey.applyStyle`. It asks for an id, writes `.uikey/context.md`, and appends a line to `.cursorrules` telling the agent to follow it. With no workspace open it falls back to inserting the key as a comment at the top of the active file.
+  </Column>
+</Columns>
+
+The `.cursorrules` injection is the bit that made it click for me. Instead of pasting a key into every chat, the rule makes the editor's agent pick up the design system on every request without being asked.
+
+## The generator fan-out
+
+On day two I got ambitious and scaffolded ten generator packages that take a manifest and emit framework code: Tailwind config, shadcn, Next.js, React Native, Flutter, SwiftUI, Vue SFC, Svelte, Storybook and Framer. Some are real. The Tailwind generator, for example, resolves W3C-style `$value` token objects and writes a full `theme.extend` block. The SwiftUI one maps layout types to `VStack`/`HStack`/`ZStack`. Others are thin: the Framer generator is a seven-line function that wraps the tree in a clipboard envelope.
+
+<Callout type="warn" title="Two schemas that don't meet yet">
+  The generators read a manifest shaped like `tokens` + `layout` (or `root`) with `type: "View"` nodes. The extractor emits `tagName` nodes with a `styles` block. Nothing converts one into the other yet, so the generators work on hand-written manifests (see `test_script.mjs`) but not on real extractions. Unifying them into one versioned manifest schema is the most important piece of work left.
+</Callout>
+
+## What broke, and what is still a stub
+
+Writing this up meant re-reading the code with fresh eyes. Here's the honest list:
+
+- **The hot path skips the compiler.** The extension sends the *raw* `extractDOM` JSON to `/api/ingest`, and `/api/k/[id]` returns that JSON in a code fence. A comment in the route literally says it would call `generateAIPrompt` "if we have" it. The compiler and formatter are built and tested; wiring them into the API is a few lines I haven't written.
+- **Only four style properties are captured.** Background colour, colour, padding and font size. No margins, gaps, flex/grid direction, border radius, shadows or font family. Geometry partly makes up for it, but a real key needs at least layout mode and radius.
+- **Contrast checks are naive.** `checkContrast` compares an element's own `color` with its own `backgroundColor`. Most text sits on a transparent element whose visible background comes from an ancestor, and a fully transparent colour is treated as a pass. A correct check has to walk up to the first opaque background.
+- **"Repairs" leak into the output.** When the audit finds a missing `alt` it writes `alt="Repaired: missing alt"` into the node. That makes the issue visible, but a model will happily copy that string into generated code.
+- **Animations and themes are placeholders.** `extractAnimations` looks for `transition` and `animation` on the styles object, but those properties are never captured, so it never fires. `extractTheme` loops over `:root` rules and doesn't extract anything yet.
+- **The vision package is a mock.** `packages/vision` launches Puppeteer and takes a full-page screenshot, but the per-component "slices" are placeholder strings, not cropped images.
+- **Hardcoded hosts.** The extension and VS Code extension talk to `localhost:3000`; the CLI talks to `uikey.dev` and falls back to mock data if the fetch fails.
+
+None of that is surprising for a two-day build, but I'd rather list it than have someone find it.
+
+## What's next
+
+The order I'd tackle it in:
+
+1. Run `sanitizeDOMTree`, `generateDesignTokens` and `generateAIPrompt` inside `/api/k/[id]` so every key is served as the compact prompt.
+2. Capture layout properties (`display`, `flex-direction`, `gap`, `border-radius`, `font-family`) and resolve contrast against the nearest opaque ancestor.
+3. Define one manifest schema and an adapter from extracted trees to it, so the ten generators run on real pages.
+4. Add role-based token naming using the geometry that's already captured.
+
+The core idea held up: <Mark>extract what the browser rendered, not what the developer wrote</Mark>, then compress it into a form the model already knows how to read. The rest is plumbing.
+
+<RepoCard repo="shubhrgunjan/UIKey" description="Extract any website's computed styles and layout into a compact UI manifest for AI code generators." />

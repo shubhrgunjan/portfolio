@@ -1,0 +1,104 @@
+---
+title: "QuoraFormatter: A Zero-Backend Workbench for Long-Form Curation Posts"
+publishedAt: "2025-07-28"
+author: "Shubhr Gunjan"
+summary: "Assembling a twenty-image curation post in Quora's editor was slow and error-prone. QuoraFormatter is a single HTML file that turns a library of images, captions, and sources into a numbered, paste-ready post."
+kicker: "Writing Tools / Vanilla JS"
+tags: ["javascript", "quill", "writing-tools", "quora", "localstorage"]
+accent: "pink"
+featured: 13
+repo: "https://github.com/shubhrgunjan/QuoraFormatter"
+demo: "https://shubhrgunjan.github.io/QuoraFormatter/"
+---
+
+Much of my writing on Quora is long-form curation: a numbered sequence of photographs or artworks, each with a caption explaining what makes it work, and a list of sources at the end. If you've read [The Artful Eye](/blog/the-artful-eye-visual-aesthetics), that's the format. The thinking is the fun part. The assembly is not.
+
+Building one of these posts directly in Quora's editor meant pasting an image, typing a number and caption, adding a separator, scrolling back up to check I hadn't skipped a number, and keeping a separate note of where every image came from. Reorder two items and you renumber everything by hand. Twenty items in, it's very easy to get something wrong.
+
+**QuoraFormatter** moves all of that out of the editor. You build a library of items, pick the ones you want, drag them into order, and generate the whole post in one click, ready to paste.
+
+<StatGrid>
+  <Stat value="1" label="HTML file, no build step" />
+  <Stat value="4" label="steps: add, select, arrange, generate" />
+  <Stat value="0" label="servers of my own" />
+  <Stat value="2" label="shipped versions (v1.0, v1.1)" />
+</StatGrid>
+
+## The workflow
+
+The page is split into the same four numbered steps I was already doing by hand:
+
+<Pipeline>
+  <Step title="Add content" sub="manual or Reddit">Image URLs, caption, source.</Step>
+  <Step title="Content library" sub="localStorage">Filter used/unused, sort by date.</Step>
+  <Step title="Arrange post" sub="drag to reorder">Staging area for this post only.</Step>
+  <Step title="Generate & copy" sub="Quill editor">Numbered post plus a sources list.</Step>
+</Pipeline>
+
+Separating the **library** from the **staging area** was the key design decision. The library holds everything I've collected, which is far more than any single post uses. The staging area is a scratch copy for the post I'm writing right now. Staging copies an item instead of moving it, so clearing a draft never touches the library.
+
+## Why a single HTML file
+
+I wanted something I could open on any machine and start using with no install, account, or server. So the whole tool is one `index.html`: Tailwind from its CDN for styling, Quill 1.3.6 as the output editor, and about 400 lines of vanilla JavaScript. It's hosted on GitHub Pages. The previous version is kept beside it as `v1.0.html`, so I could always fall back if v1.1 broke something mid-post.
+
+All state lives in `localStorage` under one key, `quoraFormatterData`. Before using it, the script checks that storage is actually available (some private-browsing modes throw), and if the saved blob is corrupted it says so and starts fresh instead of failing silently.
+
+## Generating the post
+
+The output side is the reason Quill is there. Quora's editor accepts rich HTML from the clipboard, so if I can produce a rich-text document with real inline images, a normal copy-paste carries everything across. Generation rebuilds the editor contents from the staged items:
+
+```js title="index.html"
+stagedItems.forEach((item, index) => {
+    quill.insertText(quill.getLength() - 1, `${index + 1}. ${item.caption}\n`);
+    item.imageUrls.forEach(url => {
+        quill.insertEmbed(quill.getLength() - 1, 'image', url);
+        quill.insertText(quill.getLength() - 1, '\n');
+    });
+    quill.insertText(quill.getLength() - 1, '-\n');
+    if (item.sourceUrl) sourcesToDisplay.push(item.sourceUrl);
+    const originalItem = contentItems.find(ci => ci.id === item.id);
+    if (originalItem) originalItem.used = true;
+});
+```
+
+Numbering comes from the staged order, so dragging an item from position 3 to position 15 renumbers everything with no extra work. Sources are collected separately into their own textarea with a "Copy Sources" button, because they go at the end of the post and I want to paste them as plain text. Generating also marks every included item as **used** in the library. The "Unused" filter then shows what I haven't published yet, which turned out to be the feature I rely on most.
+
+"Copy Post" selects the editor's DOM contents and calls `document.execCommand('copy')`. That API is deprecated, but it reliably copies the rendered rich HTML, images included, which the plain-text clipboard path would not.
+
+## What v1.1 added
+
+v1.0 was the core loop with one image per item. v1.1 came out of actually using it:
+
+<Columns>
+  <Column title="v1.0" tone="ink">
+    One image URL per item. Manual entry only. Library plus staging, Quill output, JSON export/import of the library.
+  </Column>
+  <Column title="v1.1" tone="pink">
+    Multiple images per item. Drag-and-drop image upload via ImgBB. Fetch a post straight from a Reddit URL. Used/unused tags with filters, date sort, and an edit modal.
+  </Column>
+</Columns>
+
+Going to multiple images changed the data model from `imageUrl` to an `imageUrls` array. I didn't want to lose a library I'd already been building, so loading runs a small in-place migration:
+
+```js title="index.html"
+contentItems.forEach(item => {
+    if (item.imageUrl && !item.imageUrls) {
+        item.imageUrls = [item.imageUrl];
+        delete item.imageUrl;
+    }
+});
+```
+
+The Reddit fetcher takes a post URL, appends `.json`, and reads `data[0].data.children[0].data`. For galleries it rebuilds each image's `i.redd.it` URL from `media_metadata` (the ID plus the extension from the MIME type). For single-image posts it uses `url_overridden_by_dest`. The post title becomes the caption and the permalink becomes the source, so attribution is automatic. Reddit doesn't serve that JSON nicely to arbitrary browser pages, so the request goes through ScraperAPI with a key you paste in once. You can also drop a Reddit link directly onto the URL field and it fetches immediately.
+
+<Callout type="warn" title="Rough edges I know about">
+  This was built fast, for one user. The ImgBB upload key is embedded in the page, and the ScraperAPI key is stored in `localStorage` as plain text, which is fine on my own machine and not something to copy for a multi-user app. Captions are rendered into cards via `innerHTML` without escaping. And v1.1 has a regression: the **Export** and **Import** buttons are still in the UI, but their handlers didn't make it over from v1.0, so they currently do nothing. Until I fix that, `v1.0.html` is the way to back up a library.
+</Callout>
+
+## Where it went next
+
+QuoraFormatter is the ancestor of the tooling I use today. The library-of-items idea grew into a small Firestore-backed CMS that several tools write into: a right-click browser extension for reddit.com, and [reddit-core](/blog/reddit-core-archive-search), my archive search front-end. That fixed the biggest limitation here, which is that a `localStorage` library lives in one browser on one machine. The remaining fixes are restoring export/import, escaping captions, and moving the API keys out of the client.
+
+<RepoCard repo="shubhrgunjan/QuoraFormatter" />
+
+It's a small tool, but it changed how I write. Once assembly was mechanical, I could spend my time on the part that matters: choosing the images and explaining why they work.

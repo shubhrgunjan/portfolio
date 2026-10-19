@@ -1,37 +1,200 @@
 ---
-title: "Zero-Cloud Edge Intelligence: Building Synthetic Vector Memory Vaults"
+title: "EdgeMed Memory Lab: An Offline Clinical Memory Vault on Qdrant Edge"
 publishedAt: "2026-09-29"
-updatedAt: "2026-10-02"
+updatedAt: "2026-10-19"
 author: "Shubhr Gunjan"
-summary: "Designing EdgeMed — local-first semantic retrieval, encrypted storage vaults, and offline LLM query loops for privacy-critical environments."
+summary: "How our team built a synthetic-data-only memory and search prototype for Code Cubicle 6.0 (PS03): SQLCipher as the source of truth, an embedded Qdrant Edge shard for vectors, hybrid search in about 4 ms, staff workspaces over a private LAN, and a sync boundary that only lets reviewed reference data out."
+kicker: "Edge AI / Local-First Retrieval"
+tags: ["qdrant", "edge-ai", "privacy", "fastapi", "hackathon"]
+accent: "mint"
+featured: 5
+repo: "https://github.com/shubhrgunjan/edgemed"
 image: "/projects/edgemed.webp"
 ---
 
-Most modern AI architectures assume continuous, high-bandwidth cloud connectivity. But what happens in disaster zones, secure clinical facilities, or air-gapped field research where internet egress is either impossible or strictly forbidden?
+Most "AI memory" demos assume a cloud. There's a hosted vector database, a hosted embedding API, maybe a hosted LLM, and a network link that never drops. Problem statement PS03 at **Code Cubicle 6.0** asked for the opposite: an edge memory and intelligence platform that keeps working when the internet doesn't.
 
-For **Code Cubicle 6.0 (PS03)**, we designed **EdgeMed**: a synthetic-data-only intelligence vault engineered to run completely offline without ever transmitting a single byte outside the local perimeter.
+Our team (LEX) built **EdgeMed Memory Lab**. A Mac acts as the server. It stores clinical-style observations in an encrypted local vault, indexes them in an in-process vector shard, and serves a browser UI that staff on the same LAN can use. Pull the WAN cable and capture, search, review and edit all keep working.
 
-## The Architecture of Isolation
+Two things before the details. Every record in the system is **synthetic**. Patients are `SYN-001`, `SYN-002` and so on, and the repo says outright that this is a research demo, not a clinical system or an EHR replacement. And this is a team project: I wrote the Phase 0 architecture and requirements spec, and my teammates did most of the implementation and hardening on top of it. So "we" below means all of us.
 
-EdgeMed decouples the semantic retrieval engine into three self-contained layers:
+<Callout type="warn" title="Correcting my earlier write-up">
+  The first version of this post described per-file AES-256-GCM encryption, mutual TLS for staff logins, a `QdrantClient(path=...)` setup and answers that cite sentence offsets. That was written from the plan, not the code, and it was wrong. The real system uses an AES-256 encrypted macOS disk image plus SQLCipher, mutual TLS **between devices and the sync gateway** (staff use HTTPS with session cookies), the embedded `qdrant-edge-py` shard, and **no LLM at all**. Search returns the matching records; it doesn't write answers. This version follows the code.
+</Callout>
 
-1. **Encrypted Observation Vault**: Files and notes are encrypted on disk with AES-256-GCM. The encryption key never leaves system memory.
-2. **Local Vector Engine (Qdrant)**: Embeddings are generated on-device and indexed into an embedded Qdrant instance bound strictly to localhost.
-3. **LAN Access Control & Mutual TLS**: Staff accessing the portal over the facility’s Wi-Fi or LAN authenticate through role-based access tokens with strict sensitivity labels (`SENSITIVE` vs `HIGHLY_SENSITIVE`).
+## The shape of the system
 
-```python
-# Encrypted on-device retrieval pattern
-from qdrant_client import QdrantClient
+The rule that shapes everything else: **SQLCipher is canonical, and vectors are a derived projection.** The docstring at the top of the store says it directly:
 
-client = QdrantClient(path="./vault/vector_db")
-results = client.search(
-    collection_name="clinical_observations",
-    query_vector=local_embedder.encode(user_prompt),
-    limit=5,
-    query_filter=build_sensitivity_filter(staff_role)
-)
+```python title="edgemed/store.py"
+class Store:
+    """SQLCipher is canonical; vector work and export intent are durable projections."""
+
+    def __init__(self, root: Path, key: str, device="edge-a"):
+        if len(key) != 64 or any(c not in "0123456789abcdef" for c in key):
+            raise ValueError("A 256-bit database key is required")
+        ...
+        self.db.execute(f'''PRAGMA key = "x'{key}'"''')
+        if not self.db.execute("PRAGMA cipher_version").fetchone():
+            raise RuntimeError("SQLCipher is required")
 ```
 
-## Eliminating Cloud Hallucination
+Each memory is a small revision graph: rows in `memories` point at one or more head revisions in `revisions`. Each revision gets a row in `jobs` that tracks whether its embedding is in the vector shard yet. A background worker drains those jobs, embeds the text and upserts it into Qdrant Edge. If the shard is lost, it can be rebuilt from the database. If the database is lost, the vectors are useless on their own.
 
-Because the system operates under clinical simulation guidelines, EdgeMed adheres to a strict verifiable provenance rule: every returned answer must directly cite the exact encrypted document chunk and sentence offset where the data was located. If no matching vector passes the similarity threshold, the model explicitly acknowledges the absence of evidence rather than hallucinating plausible medical details.
+<Pipeline>
+  <Step title="Capture" sub="FastAPI + Pydantic">Strict models, `SYN-` subject IDs only</Step>
+  <Step title="SQLCipher" sub="canonical store">Revision, job, audit event in one transaction</Step>
+  <Step title="Index worker" sub="FastEmbed ONNX">bge-small-en-v1.5, 384-d, batches of 4</Step>
+  <Step title="Qdrant Edge" sub="in-process shard">Cosine, `max_search_threads=2`</Step>
+  <Step title="Hybrid search" sub="dense + keyword">RRF fusion, final auth check</Step>
+</Pipeline>
+
+### Encryption, honestly described
+
+At rest there are two layers:
+
+- **The vault volume.** On first setup the CLI creates a 4 GB APFS sparsebundle with `hdiutil create ... -encryption AES-256`, using a random password that lives in the macOS Keychain. Everything goes inside that mounted volume: the database, the vector shard, the PKI material. Before the server writes anything, `verify_vault()` checks `hdiutil info` and refuses to continue unless the expected image is mounted *and* reports `image-encrypted: true`.
+- **The database.** SQLCipher with a 256-bit raw key, also from the Keychain. There is no plaintext fallback. If the Keychain entry is missing, `load_secret` raises instead of quietly creating a new key.
+
+`edgemed lock` stops the services and unmounts the volume. `backup` makes a cold, checksummed copy of the encrypted container, and the recovery run mounted that copy read-only and confirmed that memories, revisions, outbox, inbox and audit history all matched.
+
+The repo is upfront about what this doesn't cover, and I'd rather repeat it than oversell it. Encryption does nothing against malware running as the unlocked OS user. The HMAC audit chain catches edits but not a rollback of the whole store. Deletion purges derived vectors but deliberately keeps the encrypted revision history.
+
+## Embeddings with no network fallback
+
+The embedding model is `BAAI/bge-small-en-v1.5`, loaded through FastEmbed from a pinned, quantized ONNX snapshot. The interesting bit is everything that *prevents* a download:
+
+```python title="edgemed/retrieval.py"
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+os.environ["DO_NOT_TRACK"] = "1"
+import onnxruntime as ort
+
+ort.disable_telemetry_events()
+...
+MODEL_REVISION = "aa8f8b060edb00e03bfdd08813a2949946c8ba55"
+
+def local_embedder(cache, threads=2):
+    path = Path(cache) / "models--Qdrant--bge-small-en-v1.5-onnx-Q" / "snapshots" / MODEL_REVISION
+    if not (path / "model_optimized.onnx").is_file():
+        raise RuntimeError("Pinned local embedding model is missing. ... Runtime will not download it.")
+    return TextEmbedding(MODEL, cache_dir=str(cache), local_files_only=True,
+                         threads=threads, specific_model_path=str(path))
+```
+
+Downloading is its own explicit step, `scripts/provision_assets.py`, which checks every model file against committed SHA-256 hashes. At runtime a missing model is a hard error, not a reason to go online. Two of the real retrieval tests were also run inside a macOS sandbox that denies network access. That's a stronger check than monkeypatching Python sockets, though it still only covers those tests.
+
+## Hybrid search that respects permissions
+
+Pure vector search on short clinical notes misses exact terms like drug names and vitals, and pure keyword search misses paraphrases. So `Retrieval.search` runs both and fuses them:
+
+1. Embed the query (query embeddings are not cached).
+2. Load the **authorized current corpus**: one SQL read of every current head revision the caller's scopes can see. It's cached in memory and invalidated by a generation counter that every committed transaction bumps.
+3. Run the dense search in Qdrant Edge, **prefiltered** to exactly those revision IDs, so stale revisions or other users' heads can't crowd the top-k.
+4. Score keywords with a BM25-style formula over the same corpus.
+5. Merge with reciprocal rank fusion, keep the best revision per memory, then run a final `eligible_results` check against SQLCipher before returning anything.
+
+```python title="edgemed/retrieval.py"
+# Apply canonical eligibility before top-k to prevent stale/foreign heads crowding hits.
+eligible = q.Filter(must=[q.HasIdCondition(set(revisions))])
+points = self.shard.search(q.SearchRequest(
+    query=q.Query.Nearest(vector, using="dense"),
+    limit=max(100, limit * 4), filter=eligible, with_payload=False))
+...
+scores = {rid: 1 / (61 + rank)
+          for rank, (rid, _) in enumerate(sorted(dense.items(), key=lambda v: (-v[1], v[0])))}
+for rank, (rid, _) in enumerate(sorted(lexical.items(), key=lambda v: (-v[1], v[0]))):
+    scores[rid] = scores.get(rid, 0) + 1 / (61 + rank)
+```
+
+The last check matters more than it looks. The vector shard is a projection that can lag: a deletion might be committed in SQLCipher while its job is still waiting in the queue. Re-checking scope, deletion state and current heads against the canonical store means a deleted or out-of-scope record can't leak through a stale index.
+
+### What the numbers look like
+
+The team benchmarked the same harness before and after the hardening pass: 1,000 synthetic records plus 10% extra revisions, 200 distinct queries, three runs of 1,000 full backend queries each (including embedding and the canonical checks, but not HTTP).
+
+<StatGrid>
+  <Stat value="17.5 → 4.3 ms" label="p50 backend query, 1k records" />
+  <Stat value="52.5 → 17.9 s" label="indexing 1k records" />
+  <Stat value="384" label="embedding dimensions" />
+  <Stat value="50" label="backend tests passing" />
+</StatGrid>
+
+| Run | Baseline p50 / p95 | Revised p50 / p95 |
+|---|---:|---:|
+| 1 | 17.523 / 25.329 ms | 4.381 / 6.315 ms |
+| 2 | 17.858 / 25.463 ms | 4.339 / 4.634 ms |
+| 3 | 17.866 / 25.368 ms | 4.329 / 4.644 ms |
+
+Most of the gain came from boring fixes: replacing an N+1 full-history read with one bulk read of current heads, caching the keyword statistics, prefiltering by authorized IDs, and batching index writes so the shard's critical sections stay short.
+
+The limit is documented right next to the win. At **10,000 records**, p50 rose to about **101 ms** because the corpus estimate passed the 32 MiB cache allowance, so corpus preparation went back onto the query path. The code chooses to stay uncached rather than silently truncate the corpus. I agree with that trade: a slow correct search beats a fast one that quietly drops records.
+
+## Staff on a hospital LAN
+
+The second feature pass added a "hospital LAN" demo: several staff sharing one server from their own devices on the local network.
+
+<Columns>
+  <Column title="Who sees what" tone="paper">
+    Each staff account belongs to a **workspace** (for example `ward-a`). `SENSITIVE` observations go into the workspace and the whole team sees them. `HIGHLY_SENSITIVE` observations go into a `personal:<username>` scope that only the creator can read. Admins can manage shared records and demo sync. Every check runs on the server, including list, detail, search and edits.
+  </Column>
+  <Column title="How the edge is exposed" tone="sky">
+    Only Edge A is ever bound to a non-loopback address, and only to a **private IPv4** (10/8, 172.16/12, 192.168/16). The CLI generates a 30-day demo CA and a 7-day server certificate whose only SAN is that IP. Edge B, the sync gateway and the Qdrant server stay on loopback.
+  </Column>
+</Columns>
+
+The scoping rule fits in a few lines, which is why I trust it:
+
+```python title="edgemed/accounts.py"
+def scopes(identity):
+    workspace = identity["owner"]
+    username = identity["username"]
+    if workspace == "operator" and username == "operator":
+        return (workspace,)
+    return (workspace, f"personal:{username}")
+
+def record_owner(identity, privacy):
+    if privacy == "HIGHLY_SENSITIVE" and identity["username"] != "operator":
+        return f"personal:{identity['username']}"
+    return identity["owner"]
+```
+
+Around that sits a standard set of web defenses: Argon2 password hashes, a login limit of 8 attempts per 5 minutes per client, `HttpOnly` + `Secure` + `SameSite=Strict` session cookies, a CSRF header on every mutating request, strict `Host` and `Origin` checks, a 32 KB request body cap and a locked-down CSP. Sessions end after **5 minutes idle** or **30 minutes total**, and background polling doesn't count as activity. On sign-out the frontend cancels in-flight requests and clears its state, and a Playwright test checks that a late search response can't put a previous user's results back on screen.
+
+## The sync boundary: only reviewed data leaves
+
+PS03 also asked for synchronization between edge devices. Clinical observations obviously can't be synced around freely, so we made the boundary very narrow. **Private observations and their embeddings never leave the device.** The only things that sync are two predefined synthetic reference checklists ("hydration observation" and "offline handoff"), each with three reviewed text variants.
+
+<Pipeline>
+  <Step title="Edge outbox" sub="durable, idempotent">Policy rechecked right before egress</Step>
+  <Step title="Ed25519 sign" sub="per operation" />
+  <Step title="mTLS 1.3" sub="device certs">Gateway rejects unknown or revoked devices</Step>
+  <Step title="Central projector" sub="Qdrant server">Rebuilds approved text, embeds it itself</Step>
+  <Step title="Signed snapshot" sub="back to edges">Verified, size-bounded, swapped safely</Step>
+</Pipeline>
+
+A few details here took the most review time:
+
+- **The central side never trusts edge content.** `CentralProjector` asserts that the text is one of the approved variants and computes the vector itself. Edges can't push arbitrary vectors or text into the shared index.
+- **Every response is bound to its request.** Pull pages are signed by the gateway, must echo the request's nonce and cursor, must have contiguous sequence numbers, and are capped at 256 KB.
+- **Snapshots are treated as hostile archives.** `validate_archive` rejects absolute paths, `..`, links and special files, limits nesting depth and expanded size, and the manifest's signature, scope, model name and nonce all have to match. The replacement shard is opened *before* the working one is closed, so a corrupt download leaves the old state in place.
+
+The team ran three isolated two-device rehearsals covering a real gateway outage, local work while offline, queued edits, conflict convergence and resolution, private-record exclusion, mTLS rejection and invalid-signature rejection. All three passed.
+
+## Where intelligence stops (for now)
+
+There's a governance module, and I want to describe it accurately. `governance.evaluate` gives each memory a deterministic, advisory retention score, `0.7 × importance + 0.3 × freshness` with a 30-day decay. Allergies, high-importance items and unresolved conflicts are pinned, and `automatic_deletion` is hard-coded to `False`. It suggests what to archive. It doesn't act on its own, and nothing in the system diagnoses anything.
+
+There's also no language model. The original spec's future-work section proposes on-device quantized SLMs through `llama.cpp` for narrative summaries, but that isn't built, and I'd rather say so than imply it.
+
+## What I learned
+
+<Window title="Lessons from PS03" tone="paper">
+  - **Pick a source of truth and make everything else rebuildable.** Most of the subtle bugs (a stale embedding acknowledgement wiping a pending delete, a stale cache returning a deleted record) went away once vectors were treated as a projection with generation-checked jobs.
+  - **"Offline" means removing every fallback, not just testing without Wi-Fi.** Pinned hashes, `local_files_only`, telemetry off, and a sandboxed test with network access denied.
+  - **Put the limits in the same doc as the benchmark.** The 4 ms number and the 101 ms number sit next to each other in the results doc, and that's what makes the 4 ms one believable.
+</Window>
+
+Still pending, per the repo: testing on physical Android hardware (the Snapdragon target device wasn't available), a Linux runtime with a properly reviewed encrypted volume, portable key recovery and rotation, an independent security review, and long soak and power-loss tests. None of that is hidden. It's in the README under "Current boundaries".
+
+<RepoCard repo="shubhrgunjan/edgemed" description="Synthetic-data-only offline memory vault: SQLCipher, Qdrant Edge, FastEmbed, staff workspaces over a private LAN, signed selective sync." />

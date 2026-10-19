@@ -1,43 +1,229 @@
 ---
-title: "Physics-Grounded Humanoid Simulation: From MuJoCo MJCF to Real-Time WebGL Teleoperation"
+title: "VASIMOV: Building a Virtual Asimov 1 That the Real SDK Can't Tell Apart"
 publishedAt: "2026-10-08"
-updatedAt: "2026-10-10"
+updatedAt: "2026-10-19"
 author: "Shubhr Gunjan"
-summary: "Architecting VASIMOV — bridging 78-observation locomotion policy inference, wire protocols, and sub-16ms 3D rendering for the Menlo Asimov 1 humanoid."
-image: "/projects/vasimov.webp"
+summary: "A MuJoCo digital twin of Menlo's Asimov 1 humanoid that speaks the official UDP wire protocol, runs the official 78-obs to 23-action locomotion policy at 50 Hz, and labels every field it emits as real, approximate, or placeholder."
+kicker: "Robotics / Physics Simulation"
+tags: ["robotics", "mujoco", "humanoid", "onnx", "reinforcement-learning", "python", "telemetry"]
+accent: "sky"
+featured: 2
+repo: "https://github.com/shubhrgunjan/vasimov"
 ---
 
-When simulating bipedal humanoids, the gap between abstract mathematical kinematics and physical stability is razor-thin. For the Menlo Asimov 1 humanoid robot, realistic testing requires zero compromises on collision geometry, actuator latency, and contact friction.
+Menlo Research's **Asimov 1** is an open humanoid: 25 actuated joints, a published MJCF model, an official Python SDK (`menlo-sdk`), and a pretrained locomotion policy on Hugging Face. What you don't get, unless you own the robot, is the robot. Everything that talks to Asimov 1 assumes there is firmware on the other end of a UDP socket.
 
-## Why MuJoCo for Humanoid Physics?
+So I built one. **VASIMOV** (Virtual Asimov 1) is a MuJoCo simulation that pretends to be the robot well enough that the *unmodified* `menlo-sdk` and `menlo` CLI connect to it, stand it up, and make it walk. Then I bolted on everything you can't get from real hardware: ground-truth telemetry, a browser dashboard, manual joint control, procedural environments, and flight-data recording.
 
-MuJoCo (Multi-Joint dynamics with Contact) excels at resolving convex contact dynamics and tendon constraints with high numerical fidelity. In building **VASIMOV**, our primary goal was to provide an exact digital twin that obeys the official Asimov wire protocol while streaming live ground-truth telemetry.
+I built it over about five days in early October 2026. The rule I set on day one was simple: **never fake a number**. If the sim can't produce a quantity honestly, it says so.
 
-### The 78-to-23 Policy Pipeline
+## The goal: a twin that passes the SDK's own checks
 
-The official Asimov 1 locomotion policy consumes a 78-dimensional observation vector at 50 Hz:
+There are plenty of ways to make a humanoid wobble in MuJoCo. The interesting constraint here was compatibility. A "digital twin" that needs its own client library is just another simulator. I wanted a developer to point existing Asimov code at `127.0.0.1` and have it work, which meant matching the real system at three levels:
 
-- Base orientation quaternion and angular velocity
-- Simulated 6-axis IMU acceleration readings
-- 25 joint positions and joint angular velocities
-- History buffer of previous target actions
+1. **The wire.** The SDK talks protobuf over UDP: commands in on port `8850`, state out on port `8851` at 10 Hz. VASIMOV speaks exactly that, using the official `asimov_protocol` message definitions.
+2. **The firmware state machine.** `DAMP → STAND → MOVE`, a latched `FAULT_DAMP` on falls, a 2-second trajectory watchdog, a 2-second ramp into the standing pose. The SDK's preflight checks look at all of this.
+3. **The policy contract.** The official checkpoint `Menlo/asimov1-locomotion-0818` expects a very specific 78-dimensional observation. Get one scale factor wrong and the robot falls over instead of walking.
 
-The neural network outputs 23 PD actuator target angles, mapped through torque limits to the robot's high-torque brushless DC joints.
+<StatGrid>
+  <Stat value="25" label="actuated joints (firmware order 0–24)" />
+  <Stat value="78 → 23" label="policy obs → action dims" />
+  <Stat value="200 / 50 Hz" label="physics / policy rate" />
+  <Stat value="84" label="MuJoCo sensors exposed" />
+</StatGrid>
 
-```python
-# Simplified excerpt from vasimov.core.telemetry
-def step_policy_inference(model, data, policy_session):
-    obs = extract_78d_observation(data)
-    action_targets = policy_session.run(None, {"observation": obs})[0]
-    apply_pd_targets(data, action_targets, kp=120.0, kd=5.0)
-    mujoco.mj_step(model, data)
+## Architecture: one physics truth, many views
+
+Everything flows from a single MuJoCo instance stepping at 200 Hz (`dt = 0.005 s`, `implicitfast` integrator). Every fourth physics step the policy runs, so the control loop sits at 50 Hz, the same decimation the policy was trained with.
+
+<Pipeline>
+  <Step title="Command" sub="SDK / CLI / dashboard">UDP protobuf, keyboard, or REST.</Step>
+  <Step title="EdgeCore" sub="firmware state machine">Validation, clipping, watchdogs, fault latches.</Step>
+  <Step title="Observation" sub="78-D, every 4th step">Built from canonical robot state.</Step>
+  <Step title="ONNX policy" sub="CPU, 50 Hz">23 raw actions.</Step>
+  <Step title="Motor model" sub="PD + torque envelope">q_des = q_default + 0.25·a</Step>
+  <Step title="MuJoCo" sub="200 Hz">Contacts, dynamics.</Step>
+  <Step title="Telemetry" sub="UDP / WebSocket / binary">Firmware state + ground truth.</Step>
+</Pipeline>
+
+The pieces map cleanly to files: `edge/core.py` is a zero-I/O state machine (no sockets, no MuJoCo, just state and time, which made it trivially unit-testable), `edge/sim.py` owns the MuJoCo backend, `edge/policy_builder.py` builds observations, `motor_model.py` turns targets into torques, and `edge/transports/udp_transport.py` is the only thing that knows UDP exists.
+
+## The 78-dimensional observation, exactly
+
+The policy is a small MLP: `[1, 78]` float32 in, `[1, 23]` float32 out. The 23 outputs cover the legs (12), waist (1), and arms (10). The two neck joints aren't driven by the policy, so the sim holds them at zero with their own gains.
+
+The observation is where most of the subtle bugs live. I wrote one builder and made both the live runtime and a standalone verification harness import it, so there is exactly one place the layout can be wrong:
+
+```python title="edge/policy_builder.py"
+OBS_DIM: int = 78
+ACTION_DIM: int = 23
+ACTION_SCALE: float = 0.25
+ANG_VEL_SCALE: float = 0.25
+JOINT_VEL_SCALE: float = 0.10
+
+# ...
+    R = np.asarray(pelvis_xmat, dtype=np.float64).reshape(3, 3)
+    omega_body = R.T @ omega_world
+    grav_body = R.T @ np.array([0.0, 0.0, -1.0])
+
+    obs = np.concatenate([
+        ANG_VEL_SCALE * omega_body,   # 3
+        grav_body,                    # 3
+        cmd,                          # 3  [vx, vy, vyaw]
+        pos_01, pos_23, pos_45,       # 9 + 8 + 6  (q - q_default)
+        vel_01, vel_23, vel_45,       # 9 + 8 + 6  (qdot * 0.1)
+        act,                          # 23 previous actions
+    ]).astype(np.float32)
+
+    assert obs.shape == (OBS_DIM,)
 ```
 
-## Bridging MuJoCo to the Browser
+The joint terms aren't in firmware order. They're grouped into three "slots" (9, 8, and 6 joints) that mirror how the training environment's `env.yaml` declares them. I pulled every scale from that file rather than from memory, then checked the result against the policy on synthetic states in `tests/test_policy_contract.py`.
 
-While MuJoCo runs natively in C/Python, operators need fluid, browser-based inspection. Rather than streaming heavy video frames, **VASIMOV** streams lightweight binary joint state vectors over WebSockets. A Three.js client decodes the kinematic transform tree directly on the client GPU, delivering 60 FPS visualization with sub-15ms network latency.
+On the way out, actions become joint targets with `q_des = q_default + 0.25 · a`, and those targets go to a PD motor model: `tau = Kp·(q_des − q) − Kd·qdot`, clamped to each joint's peak torque from the URDF. Legs run at `Kp = 250, Kd = 5`; arms at `80 / 3`; the waist at `100 / 4`. An optional layer adds a back-EMF style envelope that shrinks available torque as joint speed approaches its no-load limit.
 
-This architecture enables:
-1. **Interactive joint overrides**: Operators can inject manual joint biases while the underlying walking policy maintains base balance.
-2. **Procedural obstacle stress-testing**: Spawning steps, slopes, and randomized friction patches on the fly.
-3. **Flight Data Recording (FDR)**: Replaying joint slip incidents frame-by-frame for post-mortem analysis.
+<Callout type="insight" title="Velocity commands are clipped to the contract">
+The policy was only trained on a box of commands: `vx ∈ [−0.6, 0.8]` m/s, `vy ∈ [−0.5, 0.5]` m/s, `wz ∈ [−0.8, 0.8]` rad/s. Anything outside that is out of distribution, so the command gateway clips it and *logs that it clipped*. A silent clamp is how you end up debugging a robot that "ignores" you.
+</Callout>
+
+## The ankle problem: two motors, two joints, not the same two
+
+This one took a while to see. In the MJCF model (and in both upstream training sims), each ankle has two orthogonal joints: **pitch** and **roll**. On the physical robot, though, each ankle is driven by two parallel pushrod actuators, **A** and **B**, and the firmware reports *motor* positions, not joint angles.
+
+If VASIMOV reported sim joint angles in the firmware slots, any SDK code doing trajectory playback would be quietly wrong. So the adapter translates between the two spaces in both directions, for positions, velocities, and torques:
+
+```python title="adapter.py"
+# Official Ankle Kinematics Constants [VERIFIED: menlo.asimov.robots lines 47-50]
+ANKLE_K_PITCH = 2.02
+ANKLE_K_ROLL = 0.8
+
+def ankle_pr_to_ab(pitch: float, roll: float) -> Tuple[float, float]:
+    motor_a = ANKLE_K_PITCH * pitch - ANKLE_K_ROLL * roll
+    motor_b = -ANKLE_K_PITCH * pitch - ANKLE_K_ROLL * roll
+    return float(motor_a), float(motor_b)
+
+def ankle_ab_to_pr(motor_a: float, motor_b: float) -> Tuple[float, float]:
+    pitch = (motor_a - motor_b) / (2.0 * ANKLE_K_PITCH)
+    roll = -(motor_a + motor_b) / (2.0 * ANKLE_K_ROLL)
+    return pitch, roll
+```
+
+Torques go through the transpose of the same Jacobian (virtual work: `tau_pitch = 2.02·(tau_A − tau_B)`), so power is conserved across the mapping. Round-trip tests in `tests/test_adapter.py` make sure `pr → ab → pr` comes back exact.
+
+## Safety logic that behaves like firmware
+
+Real robots fall over, and the SDK expects the firmware to notice. VASIMOV's fall detector watches the projected gravity vector: once its z-component rises above `−0.5` (more than 60° of tilt), the core latches `FAULT_DAMP`, sets the error bitfield, and refuses `STAND` until a virtual restart.
+
+```python title="edge/core.py"
+if gz > FALL_GRAVITY_Z_THRESHOLD:  # gz > -0.5 (tilt > 60 deg)
+    self.fault_fall = True
+    if self.fall_latch_enabled and not self.recovery_mode_active:
+        if not self.fault_latched:
+            self.fault_latched = True
+            self.mode = EdgeMode.FAULT_DAMP
+            self.move_submode = MoveSubmode.NONE
+```
+
+There's also an over-temperature trip at 80 °C that clears with hysteresis below 70 °C, a velocity-staleness watchdog (no command for 2 s in policy mode means "hold zero velocity and balance"), and a **virtual gantry**. The gantry is a MuJoCo weld constraint that pins the pelvis at standing height on boot, so the robot doesn't collapse before the stand ramp finishes. It releases itself one second after the robot is standing.
+
+## Honesty as a feature: the fidelity table
+
+The single most useful file in the repo isn't code. It's `FIDELITY.md`, which classifies *every* command, protobuf field, and physical subsystem into one of four buckets:
+
+| Label | Meaning | Example |
+| :--- | :--- | :--- |
+| `REAL-EQUIVALENT` | Matches the official protocol / firmware behaviour | `joint_pos` in firmware order, ankle coupling, mode enums |
+| `APPROXIMATE` | Functionally right, physically approximated | MuJoCo instead of hardware, PD motor model, gantry |
+| `PLACEHOLDER` | Valid protocol value, subsystem not modelled | `joint_current = 0.0 A`, `joint_temp = 25 °C`, battery |
+| `NOT IMPLEMENTED` | Explicitly absent, never faked | EOL motor calibration, video/audio timestamps |
+
+Motor current is a good example. The SDK expects it. Without published torque constants I can't compute it, so the field is a constant zero and labelled as such. Even the neck gains (`Kp = 40, Kd = 2`) are marked `ASSUMED`, and the adapter logs a warning at startup saying so. A sim that quietly invents plausible numbers is worse than no sim, because people will tune against them.
+
+## Proving it walks
+
+The acceptance bar was the official tooling, unmodified. From the step-5 test run recorded in `reports/step_5_summary.md`:
+
+<StatGrid>
+  <Stat value="2.92 m" label="forward in 10 s at vx = 0.4 m/s, no fall" />
+  <Stat value="3.92°" label="max body tilt over 10 s of balance" />
+  <Stat value="0.808 m" label="menlo walk --vx 0.4 --duration 3.0" />
+</StatGrid>
+
+The mean tracked speed in that walk was 0.32 m/s against a 0.4 m/s command. That's a tracking error I'd expect from a policy trained in a different simulator (Isaac Lab) running in MuJoCo, and it's recorded rather than tuned away. The CLI runs `menlo balance -y` and `menlo walk -y --vx 0.4 --duration 3.0` both exited 0 against the virtual robot.
+
+## Beyond the robot: the stuff hardware can't give you
+
+Once the twin was faithful, I added the things that only a simulator can do.
+
+<Figure src="/blog/humanoid-robotics-mujoco-simulation/mujoco-viewer.webp" alt="MuJoCo native viewer showing the Asimov 1 humanoid standing on a checkered floor, with a joint panel listing live angles for all 25 joints." caption="The native MuJoCo viewer running alongside the console, with live joint angles for every actuated joint." />
+
+<Columns>
+  <Column title="Operator side" tone="ink">
+- **Interactive console** with tab completion and a live status prompt
+- **Drive mode**: a 25 Hz ANSI HUD where <Kbd>W</Kbd> <Kbd>A</Kbd> <Kbd>S</Kbd> <Kbd>D</Kbd> steer and <Kbd>1</Kbd>–<Kbd>4</Kbd> shove the robot with 40–250 N
+- **Manual and hybrid modes**: drive individual joints, or let the policy walk while you pin one knee
+- **Emotes**: wave, bow, squat, cheer, dance, nod, shake
+
+</Column>
+  <Column title="Engineering side" tone="sky">
+- **Ground-truth stream** on `:8854`: per-joint torque, effort %, gains, foot contact forces
+- **Web dashboard** on `:8852`: live, cameras, motors, sensors, policy I/O, environment, replay, raw JSON workspaces
+- **Environments**: friction, mass, obstacle and terrain presets, plus drop-in YAML/XML scenes
+- **Record and replay**: sessions written to JSON and CSV for regression checks
+
+</Column>
+</Columns>
+
+The dashboard's policy workspace shows the full 78-value observation and 23-value action vectors live, grouped by contract term. It's the screen I used most while debugging, because a bad observation is visible there a second before the robot falls.
+
+### A binary protocol for clients that aren't Python
+
+The JSON telemetry frame is great for a dashboard and too heavy for a phone at 50 Hz. So I added a compact versioned binary protocol, fixed size so a client can validate a packet by its length before parsing anything:
+
+```python title="web/server/binary_protocol.py"
+STATE_MAGIC = b"VAS1"
+COMMAND_MAGIC = b"VAC1"
+
+STATE_PACKET_SIZE = 288
+COMMAND_PACKET_SIZE = 32
+
+# VAS1: magic, 6x uint8, uint16 reserved, uint32 seq, double time,
+#       3f pos, 4f quat, 3f lin_vel, 3f ang_vel, 25f qpos, 25f qvel, 3f cmd
+STATE_FMT = "<4sBBBBBBHId3f4f3f3f25f25f3f"
+COMMAND_FMT = "<4sBBHId3f"
+
+assert struct.calcsize(STATE_FMT) == STATE_PACKET_SIZE
+```
+
+That protocol is what the [Asimov 3D teleoperation controller](/blog/asimov-3d-teleoperation-controller) renders from: the phone receives joint angles, not video, and draws the robot itself. The gateway also has a LiveKit/WebRTC path that streams H.264 camera video from the sim's cameras for clients that want pixels.
+
+## What broke: the recovery-policy forensics
+
+The worst bug wasn't in the walking policy. It was in integrating **OpenHorizon Labs' safe-fall and get-up policies**, which are meant to take over when a push knocks the robot down. They loaded fine and did nothing useful. We wrote a forensic analysis (`docs/policy/openhorizon-vs-vasimov-forensic-analysis.md`) and found a stack of independent faults:
+
+- **The fall latch killed the policy.** Tilt past 60° latched `FAULT_DAMP` and zeroed `Kp`, which is exactly when a safe-fall policy needs torque. Now a `recovery_mode_active` flag records the fall without cutting the motors.
+- **Gyro double rotation.** MuJoCo's freejoint `qvel[3:6]` is already in the body frame. One layer treated it as world-frame and rotated it with `Rᵀ`, then the adapter rotated it again. The recovery policy was getting a subtly wrong angular velocity on every tick.
+- **Torque starvation.** The recovery manifests capped the knees at 25 N·m against a 45 N·m motor limit. A robot can't push itself off the floor with half its knee torque.
+- **A "get-up" that was really a teleport.** The old `getup()` snapped the pelvis back to standing height and re-welded the gantry. It looked like recovery but involved no dynamics at all. It now runs `getup.onnx` on the real physical state.
+
+After the fixes, the default chain is: official locomotion, then safe-fall on a large tilt or angular rate, then get-up once the robot settles on the ground, then back to walking once it's upright. The original pure-locomotion behaviour, fault latch included, is still one flag away (`--policy official_locomotion`).
+
+<Callout type="warn" title="Lesson">
+Every one of those bugs produced a robot that *looked* plausible. Recovery policies are trained on precise inputs, and a sim that's "close enough" quietly turns a working controller into a broken one. Matching frames, units, and limits exactly matters more than any amount of rendering polish.
+</Callout>
+
+## Where it led: TwinBench
+
+VASIMOV convinced me that the hard, valuable part of humanoid simulation isn't rendering. It's trust: knowing how far the sim is from the robot and whether a policy change made things better or worse. That's the problem **TwinBench** at OpenHorizon Labs tackles: sim-to-real calibration and policy regression testing for humanoids, starting with Asimov 1.
+
+My contributions there grew straight out of this project. I built the MuJoCo WASM browser viewer and the PAIR lab room scene, defined a robot log format with open-loop replay and a sim-vs-log report, worked on calibrating the simulator's physics against robot logs, and added importing a policy from a Hugging Face link, one-button log recording from a live session, and shipping the MCP server inside the desktop app.
+
+## What's next for VASIMOV
+
+- **Real motor currents and thermals.** Both are placeholders until torque constants and thermal parameters are published or measured.
+- **Calibration against hardware logs.** The fidelity table says "APPROXIMATE" for physics, and the honest fix is fitting against recorded robot data, which is TwinBench territory.
+- **The edge-cloud path.** The `EdgeTelemetry` builders are implemented and tested but unused on the UDP transport, which means they're marked `IMPLEMENTED-UNEXERCISED`.
+
+If you have Python 3.10+, `python setup.py` and `./run_sim.sh` get you a walking humanoid on Linux, macOS, or Windows.
+
+<RepoCard repo="shubhrgunjan/vasimov" />

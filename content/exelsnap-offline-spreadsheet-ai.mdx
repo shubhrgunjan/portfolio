@@ -1,0 +1,178 @@
+---
+title: "ExelSnap: Chatting with Spreadsheets on a Laptop, with No Cloud and No Made-Up Numbers"
+publishedAt: "2026-10-07"
+author: "Shubhr Gunjan"
+summary: "An Electron desktop app where a small local model answers questions about Excel and CSV files by writing read-only DuckDB queries. The model never sees the rows, and every number it states has a query behind it."
+kicker: "Local AI / Desktop"
+tags: ["electron", "duckdb", "local-llm", "agents", "sheetjs", "offline"]
+accent: "orange"
+featured: 8
+repo: "https://github.com/SkidGod4444/ExelSnap"
+---
+
+Spreadsheets are where a lot of sensitive data lives: salaries, sales ledgers, patient lists, exam marks. They're also exactly what people paste into cloud chatbots to ask "which region grew fastest?". ExelSnap is the version of that experience that never leaves your laptop. It's a ChatGPT-style desktop app where a **local model**, served by OpenHorizon's **SAPIENT** runtime, answers questions about Excel and CSV files by **querying them with DuckDB**.
+
+We built it in a single long day on 6 October 2026. I wrote the first version: the Electron shell, the SheetJS-to-DuckDB loader, the SQL guard, the agent loop and the SAPIENT launcher. My teammate then took it much further that evening, moving model calls to the Vercel AI SDK, storing chats in SQLite, rebuilding the UI on AI Elements, and doing the hard work of reading messy real-world spreadsheets with a proper test suite. This post covers the whole thing and credits accordingly.
+
+## The rule that shapes everything
+
+Small local models are bad at arithmetic and very good at sounding confident. If you hand a 7B model a CSV and ask for a total, it will give you a number. It may not be the right one.
+
+So we set one rule early: <Mark>the model never sees the spreadsheet</Mark>. It gets a compact schema (table names, column names and types, ranges, a few example values) and two tools. Any number it wants, it has to ask DuckDB for. Every query's result table is rendered right under the answer, so you can check the model's sentence against the data that produced it.
+
+<Pipeline>
+  <Step title="SheetJS" sub="parse">xlsx, xls, xlsb, ods, csv, tsv into raw rows.</Step>
+  <Step title="Loader" sub="workbook.ts">Find headers, split tables, infer types, drop totals.</Step>
+  <Step title="DuckDB" sub="in-memory, locked">Typed tables, no file or network access.</Step>
+  <Step title="Agent loop" sub="agent.ts">Model, then run_sql / make_chart, then model again.</Step>
+  <Step title="SAPIENT" sub="localhost:11435">Local Qwen 2.5 models via the AI SDK.</Step>
+</Pipeline>
+
+```text title="README.md (architecture)"
+React renderer ──(contextBridge IPC)──▶ Electron main ──▶ agent loop ──▶ SAPIENT  (localhost:11435, via AI SDK)
+                                             │                 │
+                                             │                 └──▶ tools: run_sql, make_chart
+                                             ├──▶ WorkbookSession: SheetJS → typed DuckDB tables (in-memory, sandboxed)
+                                             └──▶ Store: chats + settings in SQLite (userData/exelsnap.db)
+```
+
+<StatGrid>
+  <Stat value="7" label="file formats read" />
+  <Stat value="2" label="tools: run_sql, make_chart" />
+  <Stat value="40 / 500" label="result rows for the model / for you" />
+  <Stat value="33" label="loader + capacity tests" />
+</StatGrid>
+
+## Two layers between the model and your data
+
+The model writes SQL, and model-written SQL is untrusted input. We guard it twice.
+
+The first layer is a text check in `sql.ts`. It strips comments, string literals and quoted identifiers (so a column called `"update"` doesn't trip it), then rejects anything with more than one statement, anything that doesn't start like a read, and any write or admin keyword:
+
+```ts title="src/main/core/sql.ts"
+const FORBIDDEN =
+  /\b(insert|update|delete|drop|create|alter|attach|detach|copy|export|import|install|load|pragma|set|reset|call|checkpoint|vacuum|use|begin|commit|rollback|truncate|grant|revoke|merge)\b/i
+const ALLOWED_START = /^(select|with|from|values|pivot|unpivot|table|summarize|describe|show)\b/i
+
+export function guardSql(input: string): string {
+  let sql = input.trim()
+  const fence = sql.match(/^```(?:sql|duckdb)?\s*([\s\S]*?)```$/i)
+  if (fence) sql = fence[1].trim()
+  // ...
+  if (bare.includes(';')) throw new Error('Only one SQL statement is allowed per call.')
+  if (!ALLOWED_START.test(bare.trim())) throw new Error('Only read-only queries (SELECT / WITH / SUMMARIZE / DESCRIBE) are allowed.')
+  // ...
+}
+```
+
+The error messages are written for the model, not for a developer. When a query is rejected, the text goes back as the tool result and the model usually fixes it on the next step.
+
+A regex is not a security boundary, so the second layer is DuckDB itself. Each chat gets its own in-memory database, locked down before any data goes in:
+
+```ts title="src/main/core/workbook.ts"
+static async create(): Promise<WorkbookSession> {
+  const instance = await DuckDBInstance.create(':memory:', { threads: '4' })
+  const conn = await instance.connect()
+  await conn.run(`SET autoinstall_known_extensions = false`)
+  await conn.run(`SET autoload_known_extensions = false`)
+  await conn.run(`SET enable_external_access = false`)
+  await conn.run(`SET lock_configuration = true`)
+  return new WorkbookSession(instance, conn)
+}
+```
+
+With external access off, `read_csv('/etc/passwd')` or an `httpfs` call fails even if something slips past the regex. With the configuration locked, a query can't turn it back on. The original workbook is never written to. To "change" data, the model writes a `SELECT` that returns the new version, and you export that.
+
+## Reading spreadsheets people actually make
+
+This turned out to be most of the work, and nearly all of it is my teammate's. A clean CSV with a header row is the easy case. Real files have a title in A1, the table starting at C5, merged two-row headers, a "Grand total" row, numbers typed as text with currency symbols, and a "Source: ERP export" line at the bottom.
+
+| In the file | What the loader does |
+|---|---|
+| Title rows above the header | Picks the first of the top rows that is mostly text as the header |
+| Merged two-row headers ("2024" over "Q1, Q2") | Fills merges, then names columns `2024 Q1`, `2024 Q2` |
+| Several tables stacked on one sheet | Splits them into separate tables |
+| `1,234.50`, `(250)`, `12.5%`, `1.234,56` | Parses as numbers, deciding decimal comma per column |
+| `00123`, 16-digit card numbers | Keeps them as text so digits survive |
+| `31/01/2025` vs `01/31/2025` | Becomes a DATE, or stays text with a note if the order is ambiguous |
+| `N/A`, `-`, `#DIV/0!` | Empty |
+
+The table splitter has to tell a blank spacer row apart from a gap between two tables. It only starts a new table when the row after the gap is all labels *and* sits over a column that held numbers or dates so far. A spacer row inside one table never matches that.
+
+### Totals are the trap
+
+Total rows are the nastiest case because they quietly double every sum. The naive fix, dropping any row whose label contains "total", breaks a line item genuinely called "Order total". So the loader only drops a row when it is labelled like a total **and** one of its numbers actually equals the sum of the rows above it:
+
+```ts title="src/main/core/workbook.ts"
+// A row is only treated as one when it is labelled "… total" AND one of its numbers
+// really is the sum of the rows above it — a line item that just happens to be called
+// "Order total" stays.
+return count > 0 && Math.abs(sum - value) <= Math.max(0.011, Math.abs(sum) * 1e-9)
+```
+
+Anything left out gets recorded as a note on the table ("Left out 2 total rows ... keeping it would double count"), and those notes go into the schema the model sees. Nothing is dropped silently.
+
+The test suite in `tests/loader.test.mjs` generates workbooks for each of these cases and checks them, including a 150,000-row sheet, a 300-column sheet whose schema prompt has to stay small, and exports whose dates must not shift with the time zone.
+
+## Making small models behave
+
+The agent loop in `agent.ts` is around 200 lines, and nearly every branch exists because a small model did something odd during testing.
+
+<Columns>
+  <Column title="What the model did" tone="ink">
+    - Answered "how many students?" from the five sample values in the schema, without querying.
+    - Wrote the tool call as JSON in plain text instead of calling the tool.
+    - Showed a `sql` code block instead of running it.
+    - Ran the same query again and again.
+    - Returned an empty reply.
+  </Column>
+  <Column title="What the loop does" tone="paper">
+    - With a file attached, forces `toolChoice: 'required'` on the first turn, unless the message is small talk like "thanks".
+    - Recovers tool calls from `<tool_call>` tags and JSON fences, even with unescaped quotes in the SQL.
+    - Treats a lone SQL block as a `run_sql` call.
+    - Answers a repeated query with "you already ran this", and stops after two repeats.
+    - Nudges once, then fails loudly and suggests a larger model.
+  </Column>
+</Columns>
+
+```ts title="src/main/core/agent.ts"
+// With data attached, the first move must be a query: small models otherwise answer from the few
+// example values in the schema ("38 students: " followed by the 5 samples) and never look at the file.
+const mustQuery = session.tables.length > 0 && !SMALL_TALK.test(run.question ?? run.userText)
+// ...
+toolChoice: mustQuery && toolsUsed === 0 ? 'required' : 'auto',
+```
+
+One more detail I like: any text the model writes *alongside its first tool call* is thrown away, because it was written before any result came back and can't be grounded in data. Small models love to announce an answer and then go and look.
+
+The loop is capped at 6 steps. On the last step tools are removed and the model is told to answer with what it has. Older tool results beyond the most recent 12 history messages are trimmed to 600 characters so long chats fit in a small context window.
+
+## Running the model locally
+
+ExelSnap doesn't bundle a model. On every launch it looks for the `sapient` binary. If it's missing, it runs SAPIENT's own installer into `~/.local/bin` (no admin password). If it's there, it runs `sapient update`. Offline, it just uses what's installed. It then starts `sapient serve` on port 11435 and talks to it through the AI SDK's OpenAI-compatible provider.
+
+<Callout type="warn" title="Bugs we found in the runtime">
+  With SAPIENT v0.6.5, two overlapping generations corrupted the server's model state. Every reply after that came back as fragments like `"cludes the header row."` until a restart. So ExelSnap serializes every request per server and starts SAPIENT with `--max-concurrency 1`. We also saw that with `tools` in the request, replies aren't streamed token by token, so the UI shows a "Thinking" state until the whole reply arrives.
+</Callout>
+
+Memory was the other surprise. My teammate measured resident and peak memory on an M4 with 16 GB, and the GPU modes spike hard while weights upload: the 1.5B model peaked at about 9.5 GB on wgpu against 1.7 GB on CPU, and loading the 7B on GPU ran the machine out of memory. SAPIENT also keeps the last three models loaded by default. So the app starts it with `--max-models 1` and on CPU unless you choose otherwise. `capacity.ts` fits those measurements into per-backend estimates, and the model menu labels each model as recommended, tight or too large. **Auto** picks the most capable downloaded model that loads into half of system memory, which means the 7B on a 16 GB Mac and the 3B on an 8 GB one.
+
+<Callout type="insight" title="Model size matters here">
+  The 0.5B to 3B models can call tools, but they loop, pick odd tools and misread numbers. For real work the README recommends `openhorizon/qwen2.5-7b-q4`: 4.7 GB on disk and about 6 GB of memory. The guardrails above make small models usable. They don't make them smart.
+</Callout>
+
+## The rest of the app
+
+- **UI.** React in the renderer, with only a typed `api` object exposed over `contextBridge`. Chat components come from AI Elements on Tailwind v4 and shadcn/ui, and charts use Recharts.
+- **Export.** Every result table and chart has an Export button. It re-runs the query in full, not just the 500 rows on screen, and saves a real `.xlsx` or `.csv` with typed cells.
+- **Persistence.** Chats and settings live in SQLite through `node:sqlite` in WAL mode, one row per chat and per message.
+- **Debug log.** JSON lines in the app's log folder, capped at 5 MB. It records the SQL the model wrote, timings and agent decisions, but never spreadsheet rows or results, and it shortens home-directory paths to `~`.
+- **Headless CLI.** `node out/main/cli.js -f file.xlsx --schema` prints exactly what the model sees. `--sql` runs a query directly, and passing a question runs the full agent. This was the fastest way to debug prompts without clicking through the UI.
+
+## Limits and what's next
+
+ExelSnap doesn't recalculate formulas (it uses the saved results), doesn't edit the original workbook, and doesn't handle tables placed side by side on one sheet, password-protected files, or charts, pivots and macros inside a file. The packaged build is macOS-only so far. DuckDB's native binding is per platform and per CPU, so the DMG has to be built on the kind of Mac it targets. The default build is ad-hoc signed, and `release:mac` handles Developer ID signing and notarization when credentials are present.
+
+The next things I want to do are side-by-side table detection, Windows and Linux builds, and some honest accuracy testing of the 3B and 7B models against a set of questions with known answers. Right now our evidence that the agent gets things right is "the query is shown under every answer", which is the correct design, but it isn't a benchmark.
+
+<RepoCard repo="SkidGod4444/ExelSnap" description="Chat with your spreadsheets, fully offline. Local model via SAPIENT, sandboxed DuckDB queries." />

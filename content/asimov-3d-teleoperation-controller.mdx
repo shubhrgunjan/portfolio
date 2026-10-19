@@ -1,0 +1,216 @@
+---
+title: "Driving a Humanoid from a Phone: Asimov 1 3D Teleoperation in React Native"
+publishedAt: "2026-10-09"
+author: "Shubhr Gunjan"
+summary: "A React Native and Expo controller that renders the Asimov 1 humanoid locally with Three.js on expo-gl, fed by 288-byte binary state packets at 50 Hz, plus a lightweight browser controller built on the same protocol."
+kicker: "Robotics / Mobile 3D / Teleoperation"
+tags: ["react-native", "expo", "three.js", "teleoperation", "robotics", "webgl", "typescript"]
+accent: "violet"
+featured: 3
+repo: "https://github.com/shubhrgunjan/asimov-controller-3d"
+---
+
+Once I had [VASIMOV](/blog/humanoid-robotics-mujoco-simulation), a MuJoCo twin of Menlo's Asimov 1 humanoid, the obvious next question was how to drive it from something that isn't a laptop keyboard. I wanted two thumbs on a phone, a robot on the screen that moves the instant the simulation does, and no video encoder in the loop.
+
+This post covers three controllers, built over roughly 48 hours (3–5 October 2026), and why each one exists:
+
+1. **`asimov-controller`**: a first React Native app that consumed VASIMOV's JSON telemetry and camera frames. It worked, and it taught me what I didn't want.
+2. **`asimov-controller-3d`**: the real one. React Native, Expo, Three.js on a native GL surface, a binary protocol, and a jitter buffer.
+3. **`asimov-web-controller`**: a stripped-down browser client on the same protocol, for when installing an app is too much friction.
+
+## Why not just stream video?
+
+The first controller did what most teleop UIs do. It polled the simulator's REST gateway on `:8852` for camera JPEGs and read a ~25 Hz JSON telemetry stream from `:8854`. On a phone over Wi-Fi it felt like operating a robot through a webcam: compression smear, inconsistent frame pacing, and a full JSON parse for every frame.
+
+The key realisation was that I don't need pixels at all. The phone already knows what Asimov 1 looks like. What it needs is the **state**: where the pelvis is, how it's oriented, and 25 joint angles. That's about 70 floats. Send those, and let the phone's GPU draw the robot itself at the display's refresh rate.
+
+<Columns>
+  <Column title="v1: asimov-controller" tone="ink">
+    JSON telemetry frames at ~25 Hz over WebSocket, plus camera images from the REST gateway. Plain React Native components, no 3D. Every update meant a JSON parse and a React state update.
+  </Column>
+  <Column title="v2: asimov-controller-3d" tone="sky">
+    Fixed-size 288-byte binary state packets at 50 Hz, parsed with a `DataView`. Robot rendered locally with Three.js on an OpenGL ES surface. React never touches the per-frame path.
+  </Column>
+</Columns>
+
+<StatGrid>
+  <Stat value="288 B" label="VAS1 state packet, 50 Hz" />
+  <Stat value="32 B" label="VAC1 command packet, 25 Hz while moving" />
+  <Stat value="113,436" label="triangles in the mobile Asimov 1 model" />
+  <Stat value="40 ms" label="default interpolation delay (2 packets)" />
+</StatGrid>
+
+## The architecture
+
+<Pipeline>
+  <Step title="VASIMOV" sub="MuJoCo 200 Hz, policy 50 Hz">Authoritative physics.</Step>
+  <Step title="VAS1 stream" sub="WebSocket :8854">288-byte binary snapshots.</Step>
+  <Step title="StateBuffer" sub="sorted ring buffer">Drop stale, detect resets.</Step>
+  <Step title="Interpolate" sub="SLERP + lerp">Sample at newest − 40 ms.</Step>
+  <Step title="Three.js" sub="expo-gl, VSync loop">Pose 25 joints, draw.</Step>
+  <Step title="Joysticks" sub="VAC1, 25 Hz">Velocity commands back.</Step>
+</Pipeline>
+
+The rule that shapes everything: **the simulation is the only source of truth**. The phone renders, interpolates, and sends velocity commands. It never decides where the robot is while it's connected.
+
+## Owning Three.js outside React
+
+React Native is great for buttons and awful for a 60 Hz render loop. If every incoming packet went through `setState`, the reconciler would diff the tree 50 times a second for no reason. So the app hands React exactly one thing, a `GLView`, and then takes over:
+
+```tsx title="src/app/App.tsx"
+const renderer = new ThreeRenderer(gl);
+renderer.setResolution(config.rendering.resolution);
+
+const bController = new BenchmarkController(renderer);
+bController.setAppMode('TELEOP');
+bController.scene.loadLevel('ASIMOV_ENVIRONMENT');
+bController.teleopSession.setInterpolationDelay(
+  config.synchronization.interpolationDelayMs
+);
+
+// Start the Three.js render loop
+bController.start();
+```
+
+From there, the renderer, scene, cameras, robot model, and network client are plain TypeScript objects held in refs. React only re-renders for the HUD and controls overlay, through a throttled subscription. The per-frame path (sample buffer, set 25 joint rotations, draw) never allocates and never goes through the reconciler.
+
+### The WebGL 1 trap
+
+The first time I upgraded Three.js, the app crashed at startup with "WebGL 1 is not supported since r163". The device was running OpenGL ES 3.0 through expo-gl. The problem is that Three.js decides whether a context is WebGL 1 with an `instanceof WebGLRenderingContext` check, and in expo-gl the WebGL2 context *inherits* from that class. So a perfectly good WebGL2 context fails the test. The fix is small and slightly cursed:
+
+```ts title="src/renderer/ThreeRenderer.ts"
+// In expo-gl, WebGL2RenderingContext inherits from WebGLRenderingContext,
+// which erroneously triggers Three.js's WebGL 1 rejection.
+if (typeof WebGLRenderingContext !== 'undefined') {
+  try {
+    Object.defineProperty(WebGLRenderingContext, Symbol.hasInstance, {
+      value: () => false,
+      configurable: true,
+    });
+  } catch {
+    // Fallback for environments with locked intrinsics
+  }
+}
+```
+
+Three.js also wants a `<canvas>`, which doesn't exist in React Native, so the renderer is handed a small fake canvas object whose `getContext()` returns the expo-gl context.
+
+## Getting the real robot onto the phone
+
+I didn't want a stand-in mannequin. `scripts/convert_asimov_model.py` reads VASIMOV's MJCF (`asimov_1_vasimov.xml`) and the upstream STL meshes, decimates each mesh with a per-part budget, and writes a GLB that **preserves the exact joint hierarchy, pivots, and axes**. It also generates `AsimovJointHierarchy.ts`, a typed table of the 25 joints, their axes and limits, so the client and simulator can't drift apart on joint order.
+
+The mobile GLB ends up at 113,436 triangles across 26 links, embedded as Base64 so the app works offline with no asset server. The same pipeline exports the PAIR lab room (the furnished lab scene VASIMOV uses), so the robot walks around the same tables and chairs on the phone as in the simulator.
+
+MuJoCo is Z-up with X forward; Three.js is Y-up with −Z forward. Every pose goes through one mapping, and I kept it in one place:
+
+```ts title="src/model/AsimovRobotModel.ts"
+// MuJoCo X (Forward) -> Three.js -Z
+// MuJoCo Y (Left)    -> Three.js -X
+// MuJoCo Z (Up)      -> Three.js +Y
+this.rootGroup.position.set(-p[1] * s, p[2] * s, -p[0] * s);
+
+// q_three = q_coord * q_mujoco * q_coord_inv
+this.rootGroup.quaternion
+  .copy(this.coordQuat)
+  .multiply(this.scratchBaseQuat)
+  .multiply(this.coordQuatInv);
+```
+
+## The protocol: VAS1 and VAC1
+
+The wire format lives in VASIMOV (`web/server/binary_protocol.py`) and is mirrored in `src/protocol/AsimovStateProtocol.ts`. Both packets are fixed-size, little-endian, and start with a 4-byte magic, so the client rejects anything with the wrong length or magic before reading a single field.
+
+| Offset | Field | Type |
+| :--- | :--- | :--- |
+| 0–3 | magic `"VAS1"` | 4 bytes |
+| 4–9 | version, flags, mode, policy id, recovery state, safety bits | 6 × uint8 |
+| 12–15 | sequence number | uint32 |
+| 16–23 | MuJoCo sim time | float64 |
+| 24–75 | pelvis position, quaternion, linear and angular velocity | 13 × float32 |
+| 76–275 | 25 joint positions, 25 joint velocities | 50 × float32 |
+| 276–287 | echo of commanded vx, vy, yaw rate | 3 × float32 |
+
+The flags byte carries foot contacts and whether a fault is latched. The `policy_id` and `recovery_state` fields tell the UI whether the robot is walking under the official locomotion policy, falling under the safe-fall policy, or getting up, so the operator sees *why* the robot stopped responding instead of guessing.
+
+Commands go the other way as 32-byte `VAC1` packets with a command type (`WALK`, `STAND`, `CROUCH`, `RECOVERY`, `RESET`, `ESTOP`, `DAMP`) and a velocity triple. The controller only streams them while the sticks are deflected, and sends one explicit zero when they're released.
+
+## Interpolation: 50 Hz in, 60 Hz out
+
+The network clock (50 Hz) and the display clock (60 Hz) don't divide evenly, and Wi-Fi adds jitter on top. Render each packet as it arrives and you get visible judder: some display frames show a new pose, some repeat the old one, and late packets cause hitches.
+
+So `StateBuffer.ts` deliberately renders slightly in the past. Each packet is checked against the last sequence number (anything older is dropped, so the robot never rewinds), a big backwards jump in sim time is treated as a reset and flushes the buffer, and snapshots go into a small sorted ring buffer. Every display frame then samples at `t_newest − 40 ms`:
+
+- the two snapshots bracketing that time are found,
+- pelvis position and all 25 joint angles are linearly interpolated,
+- orientation uses quaternion SLERP with shortest-arc handling, falling back to normalized lerp when the two rotations are nearly identical,
+- if packets stop arriving, it holds the latest pose and caps extrapolation at 100 ms rather than inventing motion.
+
+40 ms is two packet intervals: enough to ride out one late or lost packet on ordinary Wi-Fi. The settings screen lets you pick 20 or 30 ms on a clean link, such as a USB `adb reverse` tunnel.
+
+<Callout type="note" title="Latency is a budget, not a number">
+The interpolation delay is the biggest single term in the end-to-end latency, and it's one I added on purpose. It trades a few frames of delay for motion that never stutters. For a walking humanoid, consistent motion is more useful to an operator than shaving off 20 ms.
+</Callout>
+
+## Teleop controls that fail safe
+
+The control layer (`src/controls/TeleopController.ts`) turns two virtual joysticks into a velocity command, through a deadzone, a choice of linear, exponential, or cubic response curve, and Precision, Normal, or Sport speed profiles. Whatever the curve produces is hard-clamped to the box the locomotion policy was trained on (`vx ∈ [−0.6, 0.8]`, `vy ∈ [−0.5, 0.5]`, `wz ∈ [−0.8, 0.8]`) before it reaches the wire.
+
+The safety rules are the part I care about most:
+
+- **Link loss zeroes the command.** The moment the socket goes `RECONNECTING`, `DISCONNECTED`, or `FAILED`, the session manager resets the teleop controller, so a dropped connection can never leave a stale "walk forward" queued.
+- **Reconnect flushes the buffer.** Snapshots from before the drop are discarded on a fresh handshake, so the robot doesn't replay old motion.
+- **Control lock with an E-STOP override.** The operator can lock the sticks, but `ESTOP` is the one command that always gets through.
+
+Getting connected is automatic too. In development the phone already knows the laptop's IP, because Expo loaded the JS bundle from it. `NetworkDiscovery.ts` pulls that host out of the Expo manifest, probes `http://<host>:8852/api/state`, and connects without asking anyone to type an IP address.
+
+## Measuring honestly (after measuring badly)
+
+Before writing any networking I built a benchmark mode with four synthetic workloads, from 1.45K triangles and 6 draw calls up to a 182.4K-triangle stress scene, plus the real robot model, toggles for resolution, shadows, and textures, and p95/p99 frame-time tracking.
+
+My first report claimed the robot rendered at **96,435 FPS**.
+
+That number was nonsense, and the way it was wrong is worth writing down. The test harness ran a tight synchronous loop in Node with no display sync, measured the time between iterations (about 0.01 ms), and inverted it. That's CPU loop throughput, not frames anyone sees. A 60 Hz panel can't show more than 60 frames per second, however fast the JavaScript is.
+
+I rebuilt the measurement around two separate quantities that are never added together:
+
+1. **CPU preparation time**: JavaScript, joint matrix updates, scene traversal, and draw submission for one frame.
+2. **Frame callback cadence**: the interval between VSync-driven frame callbacks on the device, plus missed VSyncs and jank percentage.
+
+On my Samsung Galaxy M14 5G (Exynos 1330, Mali-G68), preparing the articulated robot took well under a millisecond per frame, and the callback cadence stayed at the panel's 60 Hz. Even the corrected report states its limit: these are callback timings inside the JS runtime, not SurfaceFlinger presentation timestamps, which I didn't capture.
+
+<Callout type="warn" title="Lesson">
+If a performance number is impossible on the hardware, it's measuring the wrong thing. Write down what each metric physically means *before* you look at the result.
+</Callout>
+
+## The browser controller
+
+Not everyone wants to sideload an Android app to poke at a simulator. The `asimov-web-controller`, which I put together with a teammate, is the minimum version of the same idea, built with Vite, TypeScript, and Three.js, and running in any browser next to VASIMOV.
+
+It reuses the same pieces: the `VAS1`/`VAC1` protocol module, the joint hierarchy table, the PAIR lab and Asimov 1 GLBs, and the jitter-buffer approach. Here the base position uses a cubic Hermite spline, which keeps velocity continuous between snapshots. It holds **no local physics** at all. It finds the running session through a `/session` endpoint on VASIMOV's gateway, so opening `localhost:5173` is the whole setup.
+
+Controls are deliberately small: <Kbd>W</Kbd> <Kbd>S</Kbd> for forward and back, <Kbd>A</Kbd> <Kbd>D</Kbd> to turn, <Kbd>Space</Kbd> to brake, <Kbd>R</Kbd> to reset, <Kbd>1</Kbd> <Kbd>2</Kbd> <Kbd>3</Kbd> for head, chase, and orbit cameras, and <Kbd>F1</Kbd> for a telemetry overlay. The safety interlock is the browser equivalent of link-loss handling:
+
+```ts title="asimov-web-controller/src/controls/KeyboardController.ts"
+// On tab blur, visibility loss, or window minimize, release ALL controls
+window.addEventListener('blur', this.releaseAll);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    this.releaseAll();
+  }
+});
+```
+
+Without this, alt-tabbing away while holding <Kbd>W</Kbd> means the browser never sees the key-up, and the robot walks into a wall while you're reading Slack. With it, the command publisher sees no keys held and sends one zero-velocity `WALK` packet.
+
+## What I'd do differently, and what's next
+
+- **Offline mode is a toy, and it should say so.** When it isn't connected, the 3D app falls back to a small local kinematic model (an inverted-pendulum style gait with gravity and wall bounds) so the joysticks still do something. It's useful for UI work, but it isn't MuJoCo, and the app should label that state more loudly.
+- **Real presentation timing.** The next step for the benchmarks is capturing SurfaceFlinger or Perfetto frame timelines instead of relying on JS-side callbacks.
+- **Video as a side channel.** The app has a picture-in-picture camera surface for the simulator's own cameras, and VASIMOV has a LiveKit/WebRTC H.264 path. Wiring that properly into the phone, as an *addition* to local rendering rather than a replacement, is the obvious next piece.
+- **Real hardware.** The protocol carries nothing simulator-specific. The same client should be able to drive a physical Asimov 1 through an edge bridge, which is where this was always headed.
+
+The whole stack is open source:
+
+<RepoCard repo="shubhrgunjan/asimov-controller-3d" />
+
+<RepoCard repo="shubhrgunjan/asimov-web-controller" />

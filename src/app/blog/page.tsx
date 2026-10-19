@@ -1,141 +1,84 @@
-import BlurFade from "@/components/magicui/blur-fade";
-import { allPosts } from "content-collections";
-import Link from "next/link";
+import { Base64Rail, CloudSky, Leader } from "@/components/os/decor";
+import { PostCard } from "@/components/os/post-card";
+import { PostCover } from "@/components/os/post-cover";
+import { Tag } from "@/components/os/window";
+import { getAllTags, getRankedPosts } from "@/lib/posts";
+import { formatDate } from "@/lib/utils";
 import type { Metadata } from "next";
-import { paginate, normalizePage } from "@/lib/pagination";
-import { ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { BlogExplorer } from "./blog-explorer";
+
+const description =
+  "Engineering deep-dives on humanoid robotics, 3D vision, edge AI and the tools I build — written from the code up.";
 
 export const metadata: Metadata = {
-  title: "Blog",
-  description: "Thoughts on software development, life, and more.",
-  openGraph: {
-    title: "Blog",
-    description: "Thoughts on software development, life, and more.",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Blog",
-    description: "Thoughts on software development, life, and more.",
-  },
+  title: "Thoughts",
+  description,
+  openGraph: { title: "Thoughts", description },
+  twitter: { card: "summary_large_image", title: "Thoughts", description },
 };
 
-const PAGE_SIZE = 5;
-const BLUR_FADE_DELAY = 0.04;
-
-export default async function BlogPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string }>;
-}) {
-  const { page: pageParam } = await searchParams;
-
-  const posts = allPosts;
-  const sortedPosts = [...posts].sort((a, b) => {
-    if (new Date(a.publishedAt) > new Date(b.publishedAt)) {
-      return -1;
-    }
-    return 1;
-  });
-
-  const totalPages = Math.ceil(sortedPosts.length / PAGE_SIZE);
-  const currentPage = normalizePage(pageParam, totalPages);
-  const { items: paginatedPosts, pagination } = paginate(sortedPosts, {
-    page: currentPage,
-    pageSize: PAGE_SIZE,
-  });
+export default function BlogPage() {
+  const posts = getRankedPosts();
+  const [lead, ...rest] = posts;
+  const tags = getAllTags(posts);
 
   return (
-    <section id="blog">
-      <BlurFade delay={BLUR_FADE_DELAY}>
-        <h1 className="text-2xl font-semibold tracking-tight mb-2">Blog <span className="ml-1 bg-card border border-border rounded-md px-2 py-1 text-muted-foreground text-sm">{sortedPosts.length} posts</span></h1>
-        <p className="text-sm text-muted-foreground mb-8">
-          My thoughts on software development, life, and more.
-        </p>
-      </BlurFade>
+    <>
+      <section className="relative overflow-hidden pb-16 pt-28 sm:pt-36">
+        <CloudSky palette={["var(--violet)", "var(--sky)", "var(--magenta)", "var(--pink)"]} />
+        <Base64Rail text="Field notes from the build. Shubhr Gunjan." className="absolute left-4 top-28 hidden lg:block" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
+          <Leader left="Thoughts" right={`${posts.length} deep-dives`} className="mb-8" />
+          <h1 className="font-display mx-auto max-w-5xl text-center text-[clamp(3rem,10vw,8.5rem)]">
+            Field Notes From The Build.
+          </h1>
+          <p className="mx-auto mt-6 max-w-xl text-center text-lg font-medium leading-snug tracking-tight">
+            {description}
+          </p>
+        </div>
+      </section>
 
-      {paginatedPosts.length > 0 ? (
-        <>
-          <BlurFade delay={BLUR_FADE_DELAY * 2}>
-            <div className="flex flex-col gap-5">
-              {paginatedPosts.map((post, id) => {
-                const slug = post._meta.path.replace(/\.mdx$/, "");
-                const indexNumber = (pagination.page - 1) * PAGE_SIZE + id + 1;
-                return (
-                  <BlurFade delay={BLUR_FADE_DELAY * 3 + id * 0.05} key={slug}>
-                    <Link
-                      className="flex items-start gap-x-2 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      href={`/blog/${slug}`}
-                    >
-                      <span className="text-xs font-mono tabular-nums font-medium mt-[5px]">
-                        {String(indexNumber).padStart(2, "0")}.
-                      </span>
-                      <div className="flex flex-col gap-y-2 flex-1">
-                        <p className="tracking-tight text-lg font-medium">
-                          <span className="group-hover:text-foreground transition-colors">
-                            {post.title}
-                            <ChevronRight
-                              className="ml-1 inline-block size-4 stroke-3 text-muted-foreground opacity-0 -translate-x-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0"
-                              aria-hidden
-                            />
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {post.publishedAt}
-                        </p>
-                      </div>
-                    </Link>
-                  </BlurFade>
-                );
-              })}
-            </div>
-          </BlurFade>
-
-          {/* Pagination Controls */}
-          {pagination.totalPages > 1 && (
-            <BlurFade delay={BLUR_FADE_DELAY * 4}>
-              <div className="flex gap-3 flex-row items-center justify-between mt-8">
-                <div className="text-sm text-muted-foreground">
-                  Page {pagination.page} of {pagination.totalPages}
-                </div>
-                <div className="flex gap-2 sm:justify-end">
-                  {pagination.hasPreviousPage ? (
-                    <Link
-                      href={`/blog?page=${pagination.page - 1}`}
-                      className="h-8 w-fit px-2 flex items-center justify-center text-sm border border-border rounded-lg hover:bg-accent/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      Previous
-                    </Link>
-                  ) : (
-                    <span className="h-8 w-fit px-2 flex items-center justify-center text-sm border border-border rounded-lg opacity-50 cursor-not-allowed">
-                      Previous
-                    </span>
-                  )}
-                  {pagination.hasNextPage ? (
-                    <Link
-                      href={`/blog?page=${pagination.page + 1}`}
-                      className="h-8 w-fit px-2 flex items-center justify-center text-sm border border-border rounded-lg hover:bg-accent/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      Next
-                    </Link>
-                  ) : (
-                    <span className="h-8 w-fit px-2 flex items-center justify-center text-sm border border-border rounded-lg opacity-50 cursor-not-allowed">
-                      Next
-                    </span>
-                  )}
-                </div>
+      {lead && (
+        <section className="mx-auto max-w-7xl px-4 sm:px-8">
+          <Link
+            href={`/blog/${lead.slug}`}
+            data-accent={lead.accent}
+            className="group grid border border-ink bg-paper shadow-[6px_6px_0_0_var(--ink)] transition-shadow hover:shadow-[10px_10px_0_0_var(--a)] md:grid-cols-[1.25fr_1fr]"
+          >
+            <PostCover
+              slug={lead.slug}
+              accent={lead.accent}
+              image={lead.image}
+              label="Featured • 01"
+              className="aspect-[16/10] border-b border-ink md:aspect-auto md:min-h-[420px] md:border-b-0 md:border-r"
+            />
+            <div className="flex flex-col p-5 sm:p-8">
+              {lead.kicker && <Tag className="self-start">{lead.kicker}</Tag>}
+              <h2 className="font-display mt-6 text-[clamp(2.2rem,4.5vw,3.8rem)]">{lead.title}</h2>
+              <p className="mt-5 text-[15px] leading-relaxed text-muted-foreground">{lead.summary}</p>
+              <div className="mono-xs mt-auto flex flex-wrap items-center gap-3 pt-8">
+                <span>{formatDate(lead.publishedAt)}</span>
+                <span>•</span>
+                <span>{lead.readingTime} min read</span>
+                <span className="ml-auto bg-ink px-2 py-1 text-paper transition-colors group-hover:bg-[var(--a)] group-hover:text-[#1e1e1e]">
+                  Read the post →
+                </span>
               </div>
-            </BlurFade>
-          )}
-        </>
-      ) : (
-        <BlurFade delay={BLUR_FADE_DELAY * 2}>
-          <div className="flex flex-col items-center justify-center py-12 px-4 border border-border rounded-xl">
-            <p className="text-muted-foreground text-center">
-              No blog posts yet. Check back soon!
-            </p>
-          </div>
-        </BlurFade>
+            </div>
+          </Link>
+        </section>
       )}
-    </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-28 pt-16 sm:px-8">
+        <BlogExplorer
+          items={rest.map(({ slug, title, summary, tags, kicker }) => ({ slug, title, summary, tags, kicker }))}
+          tags={tags}
+          cards={Object.fromEntries(
+            rest.map((p, i) => [p.slug, <PostCard key={p.slug} post={p} index={i + 2} className="w-full" />])
+          )}
+        />
+      </section>
+    </>
   );
 }

@@ -4,11 +4,38 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ------------------------------------------------------------------ */
+/*  SG//OS design tokens                                               */
+/*  Ink-on-paper base, salmon "desktop" sections, retro window chrome, */
+/*  halftone dithering and a vibrant cloud gradient for heroes.        */
+/* ------------------------------------------------------------------ */
+
 @theme inline {
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display-face);
+  --font-mono: var(--font-mono-face);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-chrome: var(--chrome);
+  --color-chrome-2: var(--chrome-2);
+  --color-desk: var(--desk);
+  --color-desk-ink: var(--desk-ink);
+  --color-pink: var(--pink);
+  --color-magenta: var(--magenta);
+  --color-sky: var(--sky);
+  --color-violet: var(--violet);
+  --color-lime: var(--lime);
+  --color-orange: var(--orange);
+  --color-mint: var(--mint);
+  --color-signal: var(--signal);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -27,88 +54,153 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+
+  --animate-marquee: marquee var(--duration, 40s) linear infinite;
+  --animate-drift: drift 22s ease-in-out infinite alternate;
+  --animate-blink: blink 1.1s steps(1) infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-50% - var(--gap, 0px) / 2)); }
+  }
+  @keyframes drift {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(3%, -4%, 0) scale(1.08); }
+    100% { transform: translate3d(-4%, 3%, 0) scale(0.96); }
+  }
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    50.01%, 100% { opacity: 0; }
+  }
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0px;
+
+  --paper: #fefefe;
+  --ink: #1e1e1e;
+  --ink-soft: #3d3d3d;
+  --chrome: #dedede;
+  --chrome-2: #c4c4c4;
+  --desk: #f386a1;
+  --desk-ink: #1e1e1e;
+  --dot: rgb(30 30 30 / 0.85);
+
+  --pink: #f386a1;
+  --magenta: #d45bb6;
+  --sky: #5aa9dc;
+  --violet: #8a6cf2;
+  --lime: #b9e830;
+  --orange: #ff8a3d;
+  --mint: #2fd39a;
+  --signal: #03aa5c;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--chrome);
+  --secondary-foreground: var(--ink);
+  --muted: #f1f1f1;
+  --muted-foreground: #5c5c5c;
+  --accent: #f4f4f4;
+  --accent-foreground: var(--ink);
+  --destructive: #d92d4a;
+  --border: var(--ink);
+  --hairline: rgb(30 30 30 / 0.14);
+  --input: var(--ink);
+  --ring: var(--magenta);
 }
 
 .dark {
-  --background: oklch(0.18 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --paper: #111111;
+  --ink: #f2f2f2;
+  --ink-soft: #c9c9c9;
+  --chrome: #262626;
+  --chrome-2: #3a3a3a;
+  --desk: #2a1520;
+  --desk-ink: #ffd4e0;
+  --dot: rgb(243 134 161 / 0.7);
+
+  --pink: #ff8fb0;
+  --magenta: #ec6ccd;
+  --sky: #6cbcf0;
+  --violet: #a48cff;
+  --lime: #c8f547;
+  --orange: #ff9b55;
+  --mint: #3ee6a8;
+  --signal: #29d27e;
+
+  --muted: #1c1c1c;
+  --muted-foreground: #a3a3a3;
+  --accent: #1f1f1f;
+  --destructive: #ff5a76;
+  --border: #3d3d3d;
+  --hairline: rgb(255 255 255 / 0.12);
+  --input: #3d3d3d;
+}
+
+/* Accent channel used by posts and project cards: set data-accent="sky" etc. */
+[data-accent] { --a: var(--pink); }
+[data-accent="sky"] { --a: var(--sky); }
+[data-accent="violet"] { --a: var(--violet); }
+[data-accent="lime"] { --a: var(--lime); }
+[data-accent="orange"] { --a: var(--orange); }
+[data-accent="mint"] { --a: var(--mint); }
+[data-accent="magenta"] { --a: var(--magenta); }
+
+@utility font-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+}
+
+@utility mono-xs {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+}
+
+/* Halftone dot field (use with text color = dot color) */
+@utility dots {
+  background-image: radial-gradient(currentColor 0.9px, transparent 1.1px);
+  background-size: 4px 4px;
+}
+@utility dots-lg {
+  background-image: radial-gradient(currentColor 1.2px, transparent 1.5px);
+  background-size: 6px 6px;
+}
+
+/* Dithered blob: a radial gradient seen through a dot mask */
+@utility dither {
+  -webkit-mask-image: radial-gradient(#000 1px, transparent 1.3px);
+  mask-image: radial-gradient(#000 1px, transparent 1.3px);
+  -webkit-mask-size: 3px 3px;
+  mask-size: 3px 3px;
+}
+
+@utility hairline {
+  border-color: var(--hairline);
+}
+
+@utility link-under {
+  text-decoration: underline;
+  text-decoration-thickness: 0.07em;
+  text-underline-offset: 0.14em;
+  &:hover {
+    text-decoration-thickness: 0.12em;
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }
 
 @layer base {
@@ -116,8 +208,23 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  ::selection {
+    background: var(--pink);
+    color: #1e1e1e;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--magenta);
+    outline-offset: 2px;
   }
 
   /* Shiki dual theme support */
@@ -132,105 +239,164 @@
     color: var(--shiki-dark);
     background-color: transparent;
   }
+}
 
-.prose pre {
-    @apply leading-relaxed bg-transparent! font-mono!;
-  }
+/* ------------------------------------------------------------------ */
+/*  Article typography                                                 */
+/* ------------------------------------------------------------------ */
 
-  .prose code {
-    @apply m-0! mx-1! border rounded-md! px-1.5 py-0.5 bg-muted/60 dark:bg-muted/40 text-[13px]! font-mono text-foreground/90!;
-  }
+.prose-os {
+  --tw-prose-body: var(--ink-soft);
+  --tw-prose-headings: var(--ink);
+  --tw-prose-bold: var(--ink);
+  --tw-prose-links: var(--ink);
+  --tw-prose-bullets: var(--ink);
+  --tw-prose-counters: var(--ink);
+  --tw-prose-quotes: var(--ink);
+  --tw-prose-hr: var(--hairline);
+  --tw-prose-th-borders: var(--ink);
+  --tw-prose-td-borders: var(--hairline);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
 
-  .prose code::before, .prose code::after {
-    @apply content-none!;
-  }
+.prose-os :where(h2, h3, h4):not(:where(.not-prose *)) {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  scroll-margin-top: 6rem;
+}
 
-  .prose h1 {
-    @apply text-2xl! font-semibold! tracking-tight! leading-tight!;
-  }
+.prose-os :where(h2):not(:where(.not-prose *)) {
+  font-size: clamp(1.75rem, 3.2vw, 2.35rem);
+  line-height: 1.05;
+  margin-top: 3.5rem;
+  margin-bottom: 1.1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--ink);
+  position: relative;
+}
 
-  .prose h2 {
-    @apply text-xl! font-semibold! tracking-tight! leading-tight!;
-  }
+.prose-os :where(h2):not(:where(.not-prose *))::before {
+  content: "§";
+  position: absolute;
+  top: -0.7rem;
+  left: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0 6px;
+  line-height: 1.3rem;
+}
 
-  .prose h3 {
-    @apply text-lg! font-semibold! tracking-tight! leading-tight!;
-  }
+.prose-os :where(h3):not(:where(.not-prose *)) {
+  font-size: 1.4rem;
+  line-height: 1.15;
+  margin-top: 2.25rem;
+}
 
-  .prose h4 {
-    @apply text-base! font-medium! tracking-tight! leading-tight!;
-  }
+.prose-os :where(a):not(:where(.not-prose *)) {
+  text-decoration-color: var(--a, var(--pink));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  font-weight: 500;
+  transition: background 120ms;
+}
 
-  .prose h5 {
-    @apply text-base! font-medium! tracking-tight! leading-tight!;
-  }
+.prose-os :where(a):not(:where(.not-prose *)):hover {
+  background: color-mix(in oklab, var(--a, var(--pink)) 35%, transparent);
+}
 
-  .prose h6 {
-    @apply text-base! font-medium! tracking-tight! leading-tight!;
-  }
+.prose-os :where(strong):not(:where(.not-prose *)) {
+  font-weight: 600;
+}
 
-  .prose a {
-    @apply text-primary underline underline-offset-4;
-  }
+.prose-os :where(code):not(:where(pre *, .not-prose *)) {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  font-weight: 500;
+  padding: 0.12em 0.4em;
+  background: var(--chrome);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+}
 
-  .prose blockquote {
-    @apply border-l-4 border-amber-500! pl-4 italic bg-muted/50 p-4 rounded-md rounded-l-none;
-  }
+.prose-os :where(code):not(:where(pre *, .not-prose *))::before,
+.prose-os :where(code):not(:where(pre *, .not-prose *))::after {
+  content: none;
+}
 
-  .prose blockquote p {
-    @apply m-0!;
-  }
+.prose-os :where(pre):not(:where(.not-prose *)) {
+  background: transparent;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+}
 
-  .prose blockquote p:first-child {
-    @apply mt-0!;
-  }
+.prose-os :where(blockquote):not(:where(.not-prose *)) {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 500;
+  font-size: 1.45rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  border-left: 6px solid var(--a, var(--pink));
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  quotes: none;
+}
 
-  /* Task lists (remark-gfm): remove bullet marker so it renders like a pure checklist */
-  .prose :where(ul.contains-task-list):not(:where([class~="not-prose"] *)) {
-    @apply list-none! pl-0!;
-  }
+.prose-os :where(blockquote p):not(:where(.not-prose *))::before,
+.prose-os :where(blockquote p):not(:where(.not-prose *))::after {
+  content: none;
+}
 
-  .prose :where(li.task-list-item):not(:where([class~="not-prose"] *)) {
-    @apply pl-0!;
-  }
+.prose-os :where(ul > li):not(:where(.not-prose *))::marker {
+  content: "▪  ";
+  color: var(--ink);
+}
 
-  .prose
-    :where(li.task-list-item > input[type="checkbox"]):not(
-      :where([class~="not-prose"] *)
-    ) {
-    @apply mr-2 align-middle!;
-  }
+.prose-os :where(ol > li):not(:where(.not-prose *))::marker {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
 
-  .prose :where(table):not(:where([class~="not-prose"]) *) {
-    @apply w-full min-w-full;
-    border-collapse: separate;
-    border-spacing: 0;
-  }
+.prose-os :where(table):not(:where(.not-prose *)) {
+  font-size: 0.92rem;
+  margin: 0;
+}
 
-  .prose :where(th):not(:where([class~="not-prose"] *)),
-  .prose :where(td):not(:where([class~="not-prose"] *)) {
-    @apply px-6 py-4 align-middle m-0 whitespace-nowrap;
-  }
+.prose-os :where(thead th):not(:where(.not-prose *)) {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.55rem 0.8rem;
+}
 
-  .prose tr{
-    @apply hover:bg-accent/50! transition-colors! cursor-pointer! h-10!;
-  }
+.prose-os :where(tbody td):not(:where(.not-prose *)) {
+  padding: 0.6rem 0.8rem;
+  vertical-align: top;
+}
 
-  .prose :where(th):not(:where([class~="not-prose"] *)) {
-    @apply text-left font-semibold text-foreground border-b border-border m-0! bg-muted/50 p-3! py-2!;
-  }
+.prose-os :where(tbody tr:hover):not(:where(.not-prose *)) {
+  background: color-mix(in oklab, var(--a, var(--pink)) 14%, transparent);
+}
 
-  .prose :where(td):not(:where([class~="not-prose"] *)) {
-    @apply text-muted-foreground border-b border-border text-sm! p-2!;
-  }
+.prose-os :where(img):not(:where(.not-prose *)) {
+  margin: 0;
+}
 
-  .prose :where(th:not(:last-child)):not(:where([class~="not-prose"] *)),
-  .prose :where(td:not(:last-child)):not(:where([class~="not-prose"] *)) {
-    @apply border-r border-border;
-  }
-
-  .prose :where(tbody tr:last-child td):not(:where([class~="not-prose"] *)) {
-    @apply border-b-0;
-  }
-
+.prose-os :where(ul.contains-task-list):not(:where(.not-prose *)) {
+  list-style: none;
+  padding-left: 0;
 }

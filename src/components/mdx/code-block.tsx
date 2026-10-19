@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, type ComponentProps } from "react";
 import { Copy, Check } from "lucide-react";
-import { Button } from "../ui/button";
 import { codeToHtml } from "shiki/bundle/web";
 import { cn } from "@/lib/utils";
 
@@ -67,44 +66,42 @@ export function CodeBlock({ children, ...props }: CodeBlockProps) {
     }
   };
 
+  const lang = extractLanguage(className);
+
   return (
-    <div className="group relative rounded-xl overflow-hidden border border-border">
+    <div className="not-prose group relative my-8 border border-ink bg-paper shadow-[4px_4px_0_0_var(--ink)]">
+      <div className="flex items-center justify-between gap-3 bg-ink px-1.5 py-[3px] text-paper">
+        <span className="mono-xs truncate">{title ?? `untitled.${lang === "plaintext" ? "txt" : lang}`}</span>
+        <span className="flex items-center gap-2">
+          <span className="mono-xs uppercase opacity-60">{lang}</span>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="mono-xs flex items-center gap-1 bg-paper px-1.5 text-ink transition-colors hover:bg-pink"
+            aria-label="Copy code"
+          >
+            {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+            {copied ? "copied" : "copy"}
+          </button>
+        </span>
+      </div>
       <pre
         ref={preRef}
         {...props}
-        className={cn("p-0! m-0! overflow-x-auto", props.className)}
+        className={cn(
+          "m-[3px]! overflow-x-auto border border-ink bg-[#fafafa]! p-0! dark:bg-[#0b0b0b]!",
+          props.className
+        )}
       >
-        {title && (
-          <div className="p-3 text-xs font-medium border-b border-border rounded-t-xl bg-muted/50 text-foreground">
-            {title}
-          </div>
+        {html ? (
+          <code
+            className={`shiki block min-w-max p-4 ${className}`}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        ) : (
+          <div className="p-4">{children}</div>
         )}
-
-        <Button
-          onClick={handleCopy}
-          variant="outline"
-          size="icon"
-          className={cn("absolute size-8 text-primary cursor-pointer right-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity rounded-md border border-border shadow-none", title ? "top-13" : "top-3", props.className)}
-          aria-label="Copy code"
-        >
-          {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-        </Button>
-        {html && (
-          <div className="p-3">
-            <code
-              className={`shiki ${className}`}
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          </div>
-        )}
-
-        {!html && (
-          <div className="p-4">
-            {children}
-          </div>
-        )}
-      </pre >
-    </div >
+      </pre>
+    </div>
   );
 }
-

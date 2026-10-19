@@ -1,0 +1,130 @@
+---
+title: "TJFLOW: A Real-Time Kanban Workspace on Firestore Listeners and Security Rules"
+publishedAt: "2026-09-07"
+author: "Shubhr Gunjan"
+summary: "Building TJFLOW, a real-time project workspace with a Kanban board, chat, activity logs and a reviewer test mode, using React 19, Vite, Tailwind v4 and Firebase, and the listener and security-rule trade-offs behind it."
+kicker: "Web App / Real-Time Collaboration"
+tags: ["react", "firebase", "firestore", "realtime", "tailwind", "typescript"]
+accent: "sky"
+featured: 9
+repo: "https://github.com/shubhrgunjan/TJ-Tasks-2026-Shubhr_Gunjan"
+demo: "https://tj-tasks-2026-shubhr-gunjan.vercel.app/"
+image: "/projects/tjflow.webp"
+---
+
+TJFLOW is a collaborative project workspace I built for the **TJ-Tasks 2026** assignment. It has multi-project Kanban boards, task comments, project channels and direct messages, an activity log, notifications, invitations, and a mock "Pro" upgrade flow. The first commit and the last README fix are a day apart (6–7 September 2026), so this post is mostly about the decisions that made that timeline work: **no custom backend, Firestore as the real-time layer, and security rules as the access-control model**.
+
+<Figure src="/blog/tjflow-realtime-visual-workspace/dashboard.webp" alt="TJFLOW dashboard with four stat cards, a My projects panel and an Upcoming deadlines panel, all empty" caption="The dashboard for a brand-new account. Everything shows zero, which turned out to matter more than I expected." />
+
+## Stack and shape
+
+It's a single-page app: **React 19 + TypeScript on Vite**, **Tailwind v4** via `@tailwindcss/vite`, **React Router 7**, **lucide-react** icons, and the **Firebase 12** web SDK for Auth and Firestore. There's no server I wrote. Vercel serves the static bundle with one rewrite that sends every path to `index.html` so client-side routing works on refresh. All the business logic lives in `src/services/*.ts`: plain async functions around Firestore, one file per domain (tasks, projects, chat, comments, invitations, notifications, activity).
+
+<StatGrid>
+  <Stat value="15" label="client routes" />
+  <Stat value="9" label="service modules over Firestore" />
+  <Stat value="14" label="activity event types" />
+  <Stat value="3" label="Kanban columns: TODO / IN_PROGRESS / COMPLETED" />
+</StatGrid>
+
+The design system is deliberately neo-brutalist: thick black borders, hard offset shadows, and priority shown as shapes as well as colours (High ●, Medium ■, Low ▲). That way priority is still readable in dark mode and for colour-blind users.
+
+## The real-time path
+
+The data model is flat: top-level `projects`, `tasks`, `activity`, `invitations`, `conversations` and `notifications` collections, with `messages` and `comments` as subcollections. "Real-time" here means every board and the dashboard subscribe to Firestore with `onSnapshot`, and every write goes straight to Firestore. Nothing updates local React state optimistically. When you drop a card in a new column, the drop handler just writes the new status:
+
+```tsx title="src/pages/ProjectBoardPage.tsx"
+const handleDrop = async (e: React.DragEvent, targetStatus: TaskStatus) => {
+  e.preventDefault();
+  setDragOverColumn(null);
+  const taskId = e.dataTransfer.getData('text/plain');
+  if (!taskId || !projectId || !profile) return;
+
+  const task = tasks.find(t => t.id === taskId);
+  if (!task || task.status === targetStatus) return;
+
+  await updateTask(taskId, projectId, { status: targetStatus }, profile.uid, profile.displayName);
+  await loadActivities();
+};
+```
+
+The board then re-renders because the project's task listener fires. The tab you're looking at and a teammate's tab on another machine get the update the same way, so the "open two windows side by side" demo in the README needs no extra code. Firestore's local cache applies the write to your own listener almost immediately, so it feels optimistic without any rollback logic on my side.
+
+<Pipeline>
+  <Step title="Drag card" sub="HTML5 DnD">dataTransfer holds the task id.</Step>
+  <Step title="updateTask()" sub="services/tasks.ts">Sets status, updatedAt, completedAt.</Step>
+  <Step title="logActivity()" sub="activity collection">Records old and new values.</Step>
+  <Step title="Security rules" sub="isProjectMember()">Checked on every read and write.</Step>
+  <Step title="onSnapshot" sub="every open client">Board and dashboard re-render.</Step>
+</Pipeline>
+
+`updateTask` does more than set a field. It reads the current document first, so it can set `completedAt` only on the transition *into* `COMPLETED`, clear it when a task leaves that column, and write separate `TASK_STATUS_CHANGE`, `TASK_PRIORITY_CHANGE` and `TASK_ASSIGN` activity entries with the old and new values. That's what the profile page and per-project activity log display.
+
+### Why one listener per project
+
+The dashboard needs every task across all of a user's projects. The obvious query would be "all tasks where I'm a member", but task documents don't store members. Projects do. And Firestore rules aren't filters: **a query is rejected if the rules can't prove that every possible result is readable**. So `subscribeUserProjectTasks` opens one `where('projectId', '==', pid)` listener per project, keeps the results in a map keyed by project ID, and flattens them on every snapshot:
+
+```ts title="src/services/tasks.ts"
+projectIds.forEach((pid) => {
+  const q = query(collection(db, 'tasks'), where('projectId', '==', pid));
+  const unsub = onSnapshot(q, (snapshot) => {
+    const list: Task[] = [];
+    snapshot.forEach((doc) => list.push(doc.data() as Task));
+    tasksMap[pid] = list;
+    callback(Object.values(tasksMap).flat());
+  });
+  unsubscribers.push(unsub);
+});
+return () => unsubscribers.forEach((unsub) => unsub());
+```
+
+That means N listeners for N projects, which is fine at workspace scale. Each query maps exactly onto one rule check, and a project that fails no longer breaks the whole dashboard.
+
+## Security rules are the backend
+
+Without a server, `firestore.rules` is the only thing standing between a user and everyone else's data. The central helper loads the parent project and checks membership:
+
+```js title="firestore.rules"
+function isProjectMember(projectId) {
+  return isAuthenticated() &&
+    (request.auth.uid in getProject(projectId).memberIds ||
+     getProject(projectId).ownerId == request.auth.uid);
+}
+
+match /tasks/{taskId} {
+  allow update: if isAuthenticated()
+    && isProjectMember(resource.data.projectId)
+    && isProjectMember(request.resource.data.projectId);
+}
+```
+
+A few details I'm happy with. Task updates check membership for both the **old and the new** `projectId`, so you can't move a task into a project you don't belong to. Members can update a project but can't change its `ownerId`. Activity entries are append-only (`allow update, delete: if false`), and the `actorId` has to match the caller, so the audit log can't be faked or edited. Comments and DMs require `authorId` / `senderId` to equal the signed-in user.
+
+## Reviewer test mode, and the empty-dashboard problem
+
+The screenshot at the top shows the real problem. A reviewer who signs up gets a workspace full of zeros and has to create projects, invite people and add tasks before there's anything to look at. Most reviewers won't. So I added a **Reviewer Test Mode**: four personas (a designer, an engineer, a VP of product and a QA lead) signed in with known demo credentials, with accounts created on first use, and `seedTestWorkspaceData()` writing 6 projects and 11 tasks into Firestore owned by whichever UID is signed in, so the rules allow it.
+
+Most of the commit history is about this feature, and it's a fair account of what breaks with seeded demo data:
+
+- The first version tried to make the demo "real". It signed into each of the four persona accounts in turn to collect their actual UIDs for `memberIds`, which meant switching the auth session back and forth in the middle of seeding. The version that shipped is simpler: everything is seeded with `ownerId` set to the **currently signed-in UID** and placeholder member IDs, so the rules always pass for whoever is looking.
+- The dashboard got the same treatment. If `getUserProjects` returns nothing, it seeds and re-queries. This also applies to a real new account, so nobody lands on the all-zeros screen above.
+- Seeding is asynchronous and races with the first snapshot, so the board could still render empty for a moment. The final fix ("never empty") merges **in-memory fallback datasets** (`getDemoProjectsFallback`, `getDemoTasksFallback`, `getDemoMessagesFallback`) into listener results when test mode is on or a query returns nothing, deduplicated by ID through a `Map`.
+- Vercel showed a blank screen at first because the env vars weren't set at build time, so `firebase.ts` now falls back to a baked-in client config.
+
+<Callout type="warn" title="Trade-offs I'd revisit">
+The fallback merge is a demo shortcut. It means the UI can show tasks that aren't really in Firestore. The seeder also writes activity to an `activity_logs` collection that the rules don't cover (the app reads `activity`), so those seed writes are rejected. And because `isPro` lives on the user's own document, which the user is allowed to write, the payment modal (three timed steps, then `isPro: true`) is a simulation only. A real gateway would have to confirm payment on a server before granting Pro.
+</Callout>
+
+## Smaller things that took longer than expected
+
+- **Theme persistence.** The first render is always light, so the OS setting doesn't cause a flash. After that, a toggle writes to `localStorage` and asynchronously to `users/{uid}.themePreference`, so your choice follows you to another device after login.
+- **DM deduplication.** `createOrGetDMConversation` queries conversations containing your UID and checks the other participant on the client before creating a new one, so opening a DM twice doesn't create two threads.
+- **Dark-mode contrast.** Neo-brutalism depends on black borders, which disappear on a dark background. Colours are CSS variables that `html.dark` overrides (border, shadow colour, surfaces), mapped into Tailwind v4 through an `@theme` block, so components never need to know which theme is active.
+
+<Figure src="/blog/tjflow-realtime-visual-workspace/payment_gateway.webp" alt="TJFLOW Pro upgrade modal with a gradient credit card preview and billing toggle" caption="The simulated Pro upgrade: live card preview, formatted inputs, and a three-step processing state machine." />
+
+## What I'd do with more than a day
+
+Move the Pro flag and the activity log behind Cloud Functions so the client can't write them directly. Put seeding behind an admin path instead of running it on auth state changes. Replace per-project listeners with a denormalized `memberIds` on each task once workspaces get big enough for listener count to matter. But for a one-day build, getting rules-enforced multi-tenancy and real cross-tab sync with no backend code to maintain was the right call.
+
+<RepoCard repo="shubhrgunjan/TJ-Tasks-2026-Shubhr_Gunjan" description="TJFLOW: real-time Kanban, chat and activity workspace on React + Firebase." />

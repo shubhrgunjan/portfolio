@@ -156,7 +156,46 @@ export const DATA = {
 
   projects: [
     {
+      title: "Parallax — Phone Video to Walkable Digital Twin",
+      rank: 1,
+      post: "parallax-phone-video-to-digital-twin",
+      accent: "pink",
+      href: "/blog/parallax-phone-video-to-digital-twin",
+      dates: "Oct 2026",
+      active: true,
+      description:
+        "Walk through a building with a phone and get a zero-install web twin: COLMAP/VGGT camera poses, 3D Gaussian Splatting, metric-scaled floor and walls, clickable rooms, search and A* walking directions. Built for Techfest 2026-27 (IIT Bombay).",
+      technologies: ["Python", "3D Gaussian Splatting", "COLMAP", "PyTorch", "Three.js", "FFmpeg"],
+      links: [],
+      image: "",
+      video: "",
+    },
+    {
+      title: "reddit-core — Archive Search for Reddit",
+      rank: 12,
+      post: "reddit-core-archive-search",
+      accent: "orange",
+      href: "https://github.com/shubhrgunjan/reddit-core",
+      dates: "Feb 2026",
+      active: true,
+      description:
+        "A research front-end over public Reddit archives: rich query building, retries with backoff, paging, and a hand-off into a Firestore-backed CMS for curation.",
+      technologies: ["JavaScript", "React", "Firebase"],
+      links: [
+        {
+          type: "Source",
+          href: "https://github.com/shubhrgunjan/reddit-core",
+          icon: <Icons.github className="size-3" />,
+        },
+      ],
+      image: "",
+      video: "",
+    },
+    {
       title: "VASIMOV — Virtual Asimov 1 in MuJoCo",
+      rank: 2,
+      post: "humanoid-robotics-mujoco-simulation",
+      accent: "sky",
       href: "https://github.com/shubhrgunjan/vasimov",
       dates: "Sep 2026 - Present",
       active: true,
@@ -182,6 +221,9 @@ export const DATA = {
     },
     {
       title: "Asimov 3D Web & Mobile Teleoperation Suite",
+      rank: 3,
+      post: "asimov-3d-teleoperation-controller",
+      accent: "violet",
       href: "https://github.com/shubhrgunjan/asimov-controller-3d",
       dates: "Oct 2026",
       active: true,
@@ -212,6 +254,9 @@ export const DATA = {
     },
     {
       title: "Nyaya Flow — AI Legal Navigation System",
+      rank: 7,
+      post: "ai-legal-accessibility-india",
+      accent: "pink",
       href: "https://shubhrgunjan.github.io/nyaya-flow/",
       dates: "Sep 2026",
       active: true,
@@ -241,6 +286,9 @@ export const DATA = {
     },
     {
       title: "EdgeMed Memory Lab",
+      rank: 5,
+      post: "air-gapped-edge-memory-qdrant",
+      accent: "mint",
       href: "https://github.com/shubhrgunjan/edgemed",
       dates: "Sep 2026 - Oct 2026",
       active: true,
@@ -266,6 +314,9 @@ export const DATA = {
     },
     {
       title: "TJFLOW — Real-Time Visual Workspace",
+      rank: 9,
+      post: "tjflow-realtime-visual-workspace",
+      accent: "sky",
       href: "https://github.com/shubhrgunjan/TJ-Tasks-2026-Shubhr_Gunjan",
       dates: "Sep 2026",
       active: true,
@@ -291,6 +342,9 @@ export const DATA = {
     },
     {
       title: "UIKey — Universal UI/UX Extraction for AI",
+      rank: 4,
+      post: "uikey-ui-extraction-for-ai",
+      accent: "lime",
       href: "https://github.com/shubhrgunjan/UIKey",
       dates: "Oct 2026",
       active: true,
@@ -315,6 +369,9 @@ export const DATA = {
     },
     {
       title: "AndroPlay — Zero-Lag Digital Display Player",
+      rank: 6,
+      post: "androplay-zero-lag-display-sync",
+      accent: "orange",
       href: "https://github.com/shubhrgunjan/androplay",
       dates: "Oct 2026",
       active: true,
@@ -339,6 +396,9 @@ export const DATA = {
     },
     {
       title: "ExelSnap — Offline Spreadsheet AI",
+      rank: 8,
+      post: "exelsnap-offline-spreadsheet-ai",
+      accent: "orange",
       href: "https://github.com/shubhrgunjan/ExelSnap",
       dates: "Oct 2026",
       active: true,
@@ -364,6 +424,9 @@ export const DATA = {
     },
     {
       title: "Mint Zoom — Cinnamon Smooth Gestures",
+      rank: 11,
+      post: "mint-zoom-smooth-gestures-linux",
+      accent: "mint",
       href: "https://github.com/shubhrgunjan/Mint_Zoom",
       dates: "Jul 2026",
       active: true,
@@ -387,6 +450,9 @@ export const DATA = {
     },
     {
       title: "QuoraFormatter & CMS Tools",
+      rank: 13,
+      post: "quoraformatter-writing-tools",
+      accent: "pink",
       href: "https://github.com/shubhrgunjan/QuoraFormatter",
       dates: "Jun 2026",
       active: true,
@@ -410,6 +476,9 @@ export const DATA = {
     },
     {
       title: "ECHO//LOOP — Temporal Puzzle Game",
+      rank: 10,
+      post: "echo-loop-temporal-puzzle-game",
+      accent: "violet",
       href: "https://github.com/shubhrgunjan/echo-loop",
       dates: "Sep 2026",
       active: true,

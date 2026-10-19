@@ -1,0 +1,157 @@
+---
+title: "Mint Zoom: Building My Own Pinch-to-Zoom for Chrome on Linux Mint"
+publishedAt: "2026-05-20"
+author: "Shubhr Gunjan"
+summary: "Chrome on Linux Mint Cinnamon never gave me a smooth, visual trackpad zoom. So I wrote a 400-line content script that does it with a single CSS matrix, a cursor-anchored zoom equation, and a tiny easing loop for scrolling."
+kicker: "Browser Extension / Linux Desktop"
+tags: ["chrome-extension", "linux", "javascript", "trackpad", "css-transforms"]
+accent: "mint"
+featured: 11
+repo: "https://github.com/shubhrgunjan/Mint_Zoom"
+---
+
+I moved my daily driver to Linux Mint Cinnamon and loved almost everything about it, except one thing I touch hundreds of times a day: the trackpad in Chrome. On a Mac or a Windows precision touchpad, pinching a page gives you a visual magnifier. You zoom into a diagram, look at it, pinch back out, and the layout never moves. On my Mint setup, what I got instead was stepped, chunky scrolling and a zoom that went through Chrome's page zoom, which <Mark>reflows the whole page</Mark>. Text rewraps, sidebars jump, and you lose your place.
+
+So I wrote **Mint Zoom** (the manifest calls it "Linux Smooth Pinch-to-Zoom"), a Manifest V3 extension that does two things:
+
+1. A purely visual zoom that magnifies the page around your cursor without touching layout.
+2. An optional smoothing engine that turns the stepped wheel events from a Linux trackpad into eased scrolling.
+
+The whole thing is one content script, `content.js`, about 400 lines of plain JavaScript, plus a small popup for settings.
+
+<StatGrid>
+  <Stat value="1x – 5x" label="visual zoom range" />
+  <Stat value="0.35" label="per-frame scroll easing factor" />
+  <Stat value="4" label="selectable modifier keys" />
+  <Stat value="1" label="permission requested (storage)" />
+</StatGrid>
+
+## Why not just use browser zoom?
+
+Chrome's built-in zoom changes the CSS pixel ratio. Every element is laid out again at the new size, which is exactly what you want for accessibility and exactly what you don't want when you're squinting at one corner of a chart. I wanted the macOS-style behaviour: the page is a fixed image and you move a magnifying glass over it.
+
+The cheapest way to get that in a browser is a CSS transform on the root element. Transforms happen after layout, in the compositor, so the page doesn't reflow at all. That one decision drives everything else in the extension.
+
+<Columns>
+  <Column title="Browser zoom" tone="ink">
+    Changes layout size. Text rewraps, responsive breakpoints can flip, scroll position drifts. Zooms toward the top-left, not your cursor.
+  </Column>
+  <Column title="Mint Zoom" tone="pink">
+    A `matrix()` transform on `html`. No reflow, GPU-composited, anchored to the exact point under your cursor. Panning is done by moving the matrix offsets.
+  </Column>
+</Columns>
+
+## How an event flows through the script
+
+Everything hangs off a single `wheel` listener registered on `window` in the **capture phase** with `passive: false`. Capture means I see the event before the page's own handlers do, and non-passive means I'm allowed to call `preventDefault()` on it. The listener then picks one of three paths:
+
+<Pipeline>
+  <Step title="wheel event" sub="capture phase">Intercepted before page scripts.</Step>
+  <Step title="Modifier held?" sub="zoom path">Update zoom around the cursor.</Step>
+  <Step title="Zoomed in?" sub="pan path">Move the matrix offsets instead of scrolling.</Step>
+  <Step title="Smooth scroll on?" sub="scroll path">Ease toward a target scroll position.</Step>
+  <Step title="rAF" sub="one write per frame">Apply transform or scroll.</Step>
+</Pipeline>
+
+The gesture it listens for is a wheel event with a modifier held, Ctrl by default. The popup lets you switch to Alt, Shift, or Super, and a slider sets the sensitivity from 0.001 to 0.050 zoom per unit of `deltaY`. Settings live in `chrome.storage.sync`, and the content script listens to `storage.onChanged`, so changing the slider takes effect on open tabs immediately with no reload.
+
+## The cursor-anchored zoom equation
+
+The part I'm happiest with is also the part that took the most fiddling. A naive zoom scales around the origin, so the thing you were pointing at slides away from the cursor. The README calls the fix "pointer locking". The idea: find the document coordinate currently under the cursor, change the scale, then solve for the translation that puts that same point back under the cursor.
+
+```js title="content.js"
+let cx = e.clientX;
+let cy = e.clientY;
+let sx = window.scrollX;
+let sy = window.scrollY;
+
+// document-space point currently under the cursor
+let dx = (cx + sx - tx) / previousZoom;
+let dy = (cy + sy - ty) / previousZoom;
+
+currentZoom = Znew;
+
+// translation that keeps that point under the cursor at the new scale
+let newTx = cx + sx - dx * currentZoom;
+let newTy = cy + sy - dy * currentZoom;
+```
+
+With `transform-origin: 0 0`, a point `d` in the document lands at `d * zoom + t` on screen. Set that equal to the cursor position before and after the zoom change and the equation above falls out. The result is that whatever is under your pointer stays put while everything else grows around it.
+
+Then comes clamping. Without it you can translate the page so far that you're staring at empty space beyond its edge. The bounds come from the viewport size and the full `scrollWidth` and `scrollHeight` of the document:
+
+```js title="content.js"
+let minTx = W + sx - currentZoom * DW;
+let maxTx = sx;
+if (minTx > maxTx) minTx = maxTx;
+
+tx = Math.max(minTx, Math.min(maxTx, newTx));
+```
+
+When zoom returns to exactly 1.0, `tx` and `ty` reset to zero and the transform, origin, and `will-change` hints are all removed, so the page goes back to its original state with nothing left over.
+
+### Writing the transform once per frame
+
+Trackpads fire wheel events faster than the display refreshes. Writing a style on every event would be wasted work, so `updateTransform()` sets a flag and schedules a single `requestAnimationFrame` callback that applies the latest state:
+
+```js title="content.js"
+document.documentElement.style.willChange = 'transform';
+document.documentElement.style.transformOrigin = '0 0';
+document.documentElement.style.transform =
+  `matrix(${currentZoom}, 0, 0, ${currentZoom}, ${tx}, ${ty}) translateZ(0)`;
+```
+
+`will-change` and the `translateZ(0)` nudge Chrome into giving the page its own compositor layer, so zooming and panning become GPU transforms rather than repaints.
+
+## Panning, and handing control back
+
+Once you're zoomed in, a plain two-finger swipe should move the magnifier, not scroll the page underneath it. So when `currentZoom > 1` and no modifier is held, the delta is subtracted from `tx`/`ty` and clamped against the same bounds.
+
+The detail that makes this feel right is what happens at the edge. The script only calls `preventDefault()` if the clamped translation actually changed. If you've panned all the way to the bottom of the magnified view, the clamp swallows the movement, the event is left alone, and Chrome's native scroll takes over. You move the magnifier until it can't go further, then the page itself starts scrolling.
+
+## Smoothing out a stepped trackpad
+
+The second feature, off by default and toggled from the popup, is the smooth-scroll engine. Instead of letting each wheel event jump the page, it accumulates a target position and eases toward it:
+
+```js title="content.js"
+// Snappier easing (0.35) removes the "cluttering"/lag feeling on trackpads
+let newSx = sx + (targetScrollX - sx) * 0.35;
+let newSy = sy + (targetScrollY - sy) * 0.35;
+
+if (Math.abs(targetScrollX - newSx) < 0.5 && Math.abs(targetScrollY - newSy) < 0.5) {
+    scrollTargetElement.scrollTo(targetScrollX, targetScrollY);
+    isScrolling = false;
+    return;
+}
+```
+
+Each frame covers 35% of the remaining distance, and once it's within half a pixel it snaps to the target and stops the loop. I tried softer factors first. They looked lovely in a demo and felt laggy in real use, because your fingers have stopped but the page is still drifting. 0.35 was where it stopped feeling like the page was on a rubber band.
+
+Two practical details:
+
+- **The right element.** Lots of modern pages scroll an inner `div`, not the document. `getScrollableElement()` walks up from the event target looking for an ancestor with `overflow-y` or `overflow-x` set to `auto`/`scroll` that actually overflows, and falls back to `documentElement`.
+- **Scroll chaining.** If that container is already at its edge in the dominant direction, the script returns without `preventDefault()`, so the outer page scrolls naturally. It also re-syncs its target from the real `scrollTop` whenever it isn't animating, so dragging the scrollbar doesn't leave a stale target behind.
+
+<Callout type="warn" title="Known trade-offs">
+  Transforming the `html` element has a cost. A transformed ancestor becomes the containing block for `position: fixed` descendants, so while you're zoomed in, sticky headers and floating buttons travel with the page instead of staying pinned. It snaps back the moment zoom returns to 1x. Zoom is also per-tab, in-memory state: reload and you're back to 1x.
+</Callout>
+
+## What I'm working on now
+
+On my machine there's a second, not-yet-pushed module in `content.js`: an Instagram Reels optimizer. Reels renders a blurred duplicate of the video behind the real one. On my laptop's integrated GPU, that extra decode-and-blur was the difference between smooth playback and dropped frames. The optimizer hides `filter: blur` wrappers, pauses and mutes the duplicate `video` elements inside them, and zeroes out background canvases, all driven by a `MutationObserver` while you're on a `/reel/` or `/reels/` path.
+
+While building it I learned something about content scripts the hard way. My first attempt at detecting single-page-app navigation wrapped `history.pushState`. But content scripts run in an isolated JavaScript world, so the page's calls to `pushState` never go through my wrapper. The thing that actually catches route changes is the one-second URL poll I added as a fallback. The proper fix is to inject a small script into the page's main world, or to listen for navigation from a service worker. That's next, along with publishing the optimizer and doing some real profiling instead of judging smoothness by feel.
+
+| Setting | Storage key | Default |
+| --- | --- | --- |
+| Zoom modifier | `modifierKey` | `ctrlKey` |
+| Zoom sensitivity | `zoomSpeed` | `0.005` |
+| Smooth scrolling | `smoothScrollEnabled` | off |
+
+## Installing it
+
+It isn't on the Chrome Web Store. Clone the repo, open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and pick the folder. Then hold <Kbd>Ctrl</Kbd> and swipe with two fingers.
+
+<RepoCard repo="shubhrgunjan/Mint_Zoom" />
+
+The main thing I took from this project: when your OS doesn't give you a feature, the browser often gives you enough to build it yourself. In this case that was one transform, one equation, and a disciplined `requestAnimationFrame` loop.

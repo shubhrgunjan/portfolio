@@ -1,37 +1,172 @@
 ---
-title: "Nyaya Flow: Making Legal Action Pathways Accessible Across Indian Languages"
+title: "Nyaya Flow: Voice-First Legal Navigation for India, Built Around a Case, Not a Chat"
 publishedAt: "2026-09-14"
-updatedAt: "2026-09-16"
+updatedAt: "2026-10-19"
 author: "Shubhr Gunjan"
-summary: "Combining Google Gemini reasoning with Gnani.ai speech recognition to turn complex Indian administrative hurdles into clear, source-backed roadmaps."
-image: "/projects/nyaya-flow.svg"
+summary: "How I built Nyaya Flow, a voice-first, multilingual legal navigation app (Expo, Gemini, Gnani.ai STT, Firebase) that turns a spoken grievance into a structured case with sourced next steps. It was a shortlisted finalist at Build in AI for India, Delhi."
+kicker: "Civic AI / Voice + LLM Orchestration"
+tags: ["gemini", "gnani-ai", "speech-to-text", "expo", "firebase", "legal-tech", "india"]
+accent: "pink"
+featured: 7
+repo: "https://github.com/shubhrgunjan/nyaya-flow"
+demo: "https://shubhrgunjan.github.io/nyaya-flow/"
+image: "/projects/nyaya-flow.webp"
 ---
 
-In India, navigating civil rights, consumer disputes, tenancy laws, or government grievance mechanisms is rarely a question of willingness — it is a problem of legal jargon and linguistic barriers.
+Most people in India don't start a legal problem with a section number. They start with a sentence like *"Mera makan malik deposit wapas nahi de raha"*, usually said out loud, often in Hindi, Marathi or Hinglish, and usually to someone who can't help. Between that sentence and an actual remedy sit a pile of questions: which law applies, which forum, which portal, which documents, what deadline, and what to do if the first step gets ignored.
 
-At the **Build in AI for India Hackathon (Delhi Edition)**, we built **Nyaya Flow** to solve this: allowing a person to speak their problem in their everyday native language and receive an immediate, actionable, step-by-step roadmap grounded in verified legal statutes.
+**Nyaya Flow** is my attempt to close that gap. You speak or type your problem in your own language and get back a **structured case** with an ordered list of next steps, the documents and evidence each step needs, and links to the official portals behind them. I built it for **Build in AI for India (Delhi Edition)**, where it was shortlisted as a finalist on **13 September 2026**.
 
-## The Technical Pipeline
+This post covers what is actually in the repo: the voice pipeline, the "zero-AI first" request router, how sources get attached, and the parts that are still hackathon-grade.
 
-Nyaya Flow brings together three key technologies:
+## The core idea: a case, not a chat
 
-1. **Gnani.ai Speech Recognition**: Accepts spoken vernacular voice inputs (Hindi, English, regional dialects), transcribing raw audio even in noisy environments.
-2. **Context Formulation & Legal Extraction**: Identifies the fundamental dispute type (e.g. unlawful eviction, non-refund of deposit, consumer grievance).
-3. **Structured Action Schema (Google Gemini)**: Formats the legal guidance into four distinct, non-ambiguous phases:
-   - Immediate documentation to gather (receipts, notices, agreements)
-   - Pre-litigation formal communications (legal notice drafts)
-   - Relevant statutory bodies or online portals (e.g., e-Daakhil, RERA, National Consumer Helpline)
-   - Escalation procedures and legal aid clinics.
+The design decision everything else hangs off is that Nyaya Flow is **case-first**. A chat transcript is a terrible place to keep the state of a legal dispute. Facts get buried in old messages, the model re-reads everything on every turn, and nothing structured comes out of it that you could track.
 
-```typescript
-// Sample action pathway generation contract
-interface LegalActionRoadmap {
-  disputeCategory: string;
-  relevantActs: string[];
-  immediateSteps: { stepNumber: number; action: string; requiredDocuments: string[] }[];
-  officialPortals: { name: string; url: string; freeOfCost: boolean }[];
-  statutoryNoticeDraftTemplate?: string;
+So every intake produces a typed `CaseAnalysisResult`: category, jurisdiction, amounts, urgency, missing information, a reasoning summary, and an `actions` array. Each action has a `purpose`, a `why`, `requiredDocuments`, `evidenceNeeded`, `sourceIds` and a `completionCriteria`. The app renders a case workspace from that object, and follow-up messages are sent as **incremental updates** against the current case state (`POST /api/ai/update-case`) instead of re-sending a growing transcript.
+
+```ts title="server/src/ai/orchestrator.ts"
+actions: {
+  id: string;
+  order: number;
+  title: string;
+  purpose: string;
+  why: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed';
+  prerequisites: string[];
+  requiredDocuments: string[];
+  evidenceNeeded: string[];
+  deadline?: string;
+  officialResource?: string;
+  sourceIds: string[];
+  completionCriteria: string;
+}[];
+```
+
+Language follows the same rule. The case model doesn't depend on language. Switching from English to Hindi calls `/api/ai/translate-case`, which re-renders only the user-facing text and is explicitly told to keep step IDs, amounts, statute names, portal names and URLs untouched. Your case stays the same case when you change the language you're reading it in.
+
+## Architecture
+
+The app is an **Expo (SDK 57) / React Native** client using `expo-router`, talking to a small **Express + TypeScript** backend that holds every API key. The client never calls Gemini or Gnani directly. Cases are cached locally in AsyncStorage and synced to **Firestore** under `users/{uid}/cases` when the user is signed in.
+
+<Pipeline>
+  <Step title="Voice / text / photo" sub="expo-audio, image picker">Raw input from the phone.</Step>
+  <Step title="STT" sub="Gemini or Gnani.ai v3">Audio becomes a transcript, server-side.</Step>
+  <Step title="Task classifier" sub="deterministic">Decides if an LLM is needed at all.</Step>
+  <Step title="Policy engine" sub="budgets + bans">Can veto or downgrade a model call.</Step>
+  <Step title="Gemini" sub="JSON mode">Structured case and action steps.</Step>
+  <Step title="Source registry" sub="12 official sources">Portals and Acts attached in code.</Step>
+  <Step title="Case workspace" sub="AsyncStorage + Firestore">Persisted, translatable, trackable.</Step>
+</Pipeline>
+
+<StatGrid>
+  <Stat value="10" label="/api/ai endpoints on the backend" />
+  <Stat value="12" label="curated official sources in the registry" />
+  <Stat value="11" label="Indian language codes mapped for Gnani STT" />
+  <Stat value="22" label="Jest tests across 6 suites" />
+</StatGrid>
+
+## Voice: two STT providers behind one interface
+
+Voice is the main way in, because the people who most need this are the least likely to type a long English paragraph. The backend exposes one route, `POST /api/ai/transcribe-audio`, and the orchestrator picks a provider:
+
+- **Gemini (default)**: audio goes in as `inlineData` with a short instruction to return only the transcript of someone describing a legal situation in India.
+- **Gnani.ai STT v3**: a dedicated Indic speech provider, which I wanted because accents and code-mixed speech are where general models stumble.
+
+Both providers implement the same `VoiceTranscriptionProvider` interface and return the same `TranscriptionResult`, so the rest of the pipeline doesn't care which one ran. The Gnani integration took the most debugging. Its v3 API wants **multipart form data with a real audio file**, not JSON with base64. So the server decodes the base64 from the phone into a `Buffer`, wraps it in a `Blob`, picks a file extension from the MIME type, and posts it with a language code:
+
+```ts title="server/src/ai/gnaniProvider.ts"
+const formData = new FormData();
+const audioBlob = new Blob([audioBuffer], { type: mimeType });
+formData.append('audio_file', audioBlob, `recording.${fileExt}`);
+formData.append('language_code', gnaniLanguageCode);
+formData.append('format', 'verbatim');
+
+const controller = new AbortController();
+const timeoutId = setTimeout(() => controller.abort(), 15000);
+```
+
+The UI's language choice (`hi`, `mr`, `hinglish`, `ta`, and so on) gets mapped to Gnani's codes (`hi-IN`, `mr-IN`, ...), with Hinglish going to `hi-IN`. Every request has a 15-second abort, and I wrote a `cleanErrorMessage` helper that turns Gnani's rate-limit, scope and HTTP 522 responses into readable messages that suggest switching to Gemini. During a live demo, *"Gnani timed out, switch to Gemini"* is far more useful than a raw HTML error page.
+
+<Callout type="note" title="Keys stay on the server">
+The Gemini, Gnani and YouTube keys are read from `server/.env` via `server/src/config.ts`. The mobile client only knows the backend URL, which it discovers by probing candidates (Metro host IP, `EXPO_PUBLIC_API_URL`, localhost, and `10.0.2.2` for the Android emulator) against `/api/health`.
+</Callout>
+
+## Zero-AI first: the deterministic classifier
+
+The most important thing I learned building this is that **a lot of legal questions don't need an LLM**. "What's the cyber crime helpline?" has one correct answer, and it should never be generated. So before any model is called, `TaskClassifier.classifyRequest` runs plain string matching over the input:
+
+```ts title="server/src/ai/taskClassifier.ts"
+if (
+  text.includes('cyber crime') ||
+  text.includes('cybercrime') ||
+  text.includes('1930') ||
+  text.includes('report cyber') ||
+  text.includes('online scam')
+) {
+  return {
+    aiRequired: false,
+    intent: 'DIRECT_LOOKUP',
+    matchedProviderId: 'src_cybercrime',
+    category: 'cyber_crime',
+    // ...
+  };
 }
 ```
 
-By ensuring that every step is source-backed and explicitly transparent about legal boundaries, Nyaya Flow bridges the gap between everyday citizens and institutional justice.
+It sorts input into four intents: `DIRECT_LOOKUP` (helplines and portals), `CASE_MUTATION` (things like "mark step done" or "delete case", which are just UI state changes), `SIMPLE_EXTRACTION`, and `COMPLEX_SYNTHESIS`. Anything that reads like a real dispute ("deposit", "refund", "withheld", "notice", "is it legal") goes to the model. Direct lookups and mutations return a full case-shaped response with **0 tokens**, `modelUsed: null`, and an empty action list, because an informational question shouldn't produce a fake three-step legal workflow.
+
+After the classifier comes a `PolicyEngine`, which can block a call before it costs anything. It has a global `NO_AI` mode, per-model enable switches, a per-session budget for the "strong" tier, and a hard rule that a one-line query can't be routed to the strongest tier. All of this is configurable at runtime through `/api/inspector/config`.
+
+<Columns>
+  <Column title="Generic chatbot" tone="ink">
+    Every question goes to the model. Portal URLs and helpline numbers are generated, so they can be hallucinated. The output is an essay.
+  </Column>
+  <Column title="Nyaya Flow" tone="pink">
+    Known lookups are answered by code. Disputes go to Gemini in JSON mode. Official sources are attached from a curated registry, not written by the model. The output is a list of actions.
+  </Column>
+</Columns>
+
+## Where sources come from
+
+This is the part I care most about getting right. When Gemini handles an actionable matter, its prompt asks for strict JSON (`responseMimeType: 'application/json'`): intent, category, an overview with three fixed sections, missing-information questions with input types, a reasoning summary, and **1 to 4 action steps**. The prompt also tells the model not to invent a multi-step workflow when someone is only asking an informational question.
+
+The model **does not write the official links**. After parsing, the orchestrator calls `providerRegistry.findRelevantSources()` with the category and keywords. It matches against a hand-curated `VERIFIED_PORTAL_REGISTRY` of 12 entries: 112, cybercrime.gov.in, RTI Online, e-Daakhil, the National Consumer Helpline, NALSA, eCourts, CPGRAMS, Parivahan eChallan, BNSS/CrPC, the Transfer of Property Act and the Consumer Protection Act 2019. Those sources are attached to each action as `officialResource` and `sourceIds`. If the model's JSON doesn't parse, the code falls back to a safe default instead of crashing.
+
+| Request type | Handled by | Tokens | Sources from |
+| --- | --- | --- | --- |
+| Helpline / portal lookup | Classifier + registry | 0 | Exact registry match |
+| "Mark step done", "delete case" | Classifier (UI mutation) | 0 | n/a |
+| Informational legal question | Gemini, no action steps | estimated | Registry by keyword |
+| Real dispute | Gemini, 1–4 actions | estimated | Registry by category + keyword |
+
+## The Pipeline Inspector
+
+Judges reasonably ask "why should I trust this?", so I built a developer screen (`app/inspector.tsx`) that answers it. Every intake records a trace in `telemetryRecorder.ts`: input normalization, the classifier's decision, policy evaluation, provider requests (including which STT engine ran and how long it took), and the final model choice with a `whyNoModel` or `whyThisModel` explanation. The inspector reads these through `GET /api/inspector/traces`. You can watch a cyber-fraud question go through with zero model calls and then watch a deposit dispute route to Gemini.
+
+## What's honest to say about the current state
+
+The finalist slot was nice, but this is a hackathon build, and I'd rather list its gaps than have someone else find them.
+
+<Callout type="warn" title="Known gaps">
+- **The model tiers are mostly naming for now.** The router and registry define four tiers, but in `MODEL_HIERARCHY` every tier currently points to the same model ID (`gemini-3.6-flash`). The routing logic, policy checks and traces are real. Mapping each tier to a different model is a one-line config change I haven't made yet.
+- **Token and cost numbers are estimates.** They're calculated as characters divided by 4, not read from the API's usage metadata.
+- **Server auth is a stub.** `middleware/auth.ts` accepts unauthenticated requests as `dev-user`. The `firebase-admin` token verification is written as comments but not enabled.
+- **Source matching is keyword-based.** That's safer than generated links, but it means the registry can attach a loosely related portal, and it only covers 12 sources so far.
+- **The confidence value is hardcoded** (`0.95` on the model path, `1.0` on direct lookups). It isn't calibrated.
+- **The hosted web demo needs a backend.** The client looks for the API on port 3001, so the AI features only work if a backend is reachable from where you open it.
+</Callout>
+
+The language detector is also deliberately simple. It counts Devanagari characters, checks a list of Marathi words to tell Marathi from Hindi, and treats Latin-script text as Hinglish if it contains at least two Hinglish grammar words like *mera*, *nahi* or *wapas*. It's fast and testable (it has its own Jest suite), and it's good enough to pick the right STT language code and response language.
+
+## What's next
+
+- Point each tier at an appropriately sized model and read real token usage from the response.
+- Verify Firebase ID tokens on the server and lock the AI routes down.
+- Grow the source registry state by state, starting with consumer commissions, rent authorities and RERA, and move from keyword matching to retrieval over the actual statute text.
+- Export the drafted legal notice as a document. The `generate-draft` and `revise-draft` endpoints already produce the text; the export flow is what's missing.
+
+The one thing I'd keep exactly as it is: **answer known facts with code, use the model only for the parts that need reasoning, and keep the result as a structured case the user can act on.**
+
+<RepoCard repo="shubhrgunjan/nyaya-flow" description="Voice-first multilingual AI legal navigation for India. Expo + Express, Gemini, Gnani.ai STT, Firebase." />
