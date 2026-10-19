@@ -2,6 +2,27 @@
 
 Posts live in `content/<slug>.mdx`. Write them in the in-site editor at `/write`, or by hand.
 
+## The `/write` editor
+
+A password-protected editor with live MDX preview, a component toolbar, image upload (button, drag-and-drop
+or paste), local autosave and `Ctrl/⌘ + S` to publish.
+
+Where "Publish" writes depends on the environment (see `.env.example`):
+
+| Setup | What happens |
+| --- | --- |
+| `GITHUB_TOKEN` + `GITHUB_REPO` set | Commits `content/<slug>.mdx` (and images to `public/blog/<slug>/`) to the repo; Vercel redeploys in ~1 min. |
+| Local `pnpm dev`, no token | Writes the files straight into `content/` and `public/blog/`. |
+| Neither | The button downloads the `.mdx` so you can commit it yourself. |
+
+**Setup on Vercel:** Project → Settings → Environment Variables → add `ADMIN_PASSWORD`, `AUTH_SECRET`,
+`GITHUB_TOKEN` (fine-grained PAT, *Contents: Read and write* on this repo only), `GITHUB_REPO`, and
+optionally `GITHUB_BRANCH` and `NEXT_PUBLIC_SITE_URL`. Redeploy, then open `/write`.
+
+**Locally:** copy `.env.example` to `.env.local`, set `ADMIN_PASSWORD` and `AUTH_SECRET`, run `pnpm dev`.
+
+Set `draft: true` (checkbox in the editor) to keep a post off the blog while you work on it.
+
 ## Frontmatter
 
 ```yaml

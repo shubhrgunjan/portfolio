@@ -89,31 +89,27 @@ export function CloudSky({
   palette?: string[];
 }) {
   const [a, b, c, d] = palette;
+  const puff = "animate-drift absolute rounded-full blur-[70px]";
   return (
-    <div aria-hidden className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)}>
-      <div className="absolute inset-0" style={{ background: a, opacity: 0.85 }} />
-      <div
-        className="animate-drift absolute -left-[10%] -top-[30%] h-[90%] w-[55%] rounded-full blur-3xl"
-        style={{ background: b }}
-      />
-      <div
-        className="animate-drift absolute -right-[8%] -top-[20%] h-[85%] w-[50%] rounded-full blur-3xl [animation-delay:-8s]"
-        style={{ background: c }}
-      />
-      <div
-        className="animate-drift absolute left-[30%] top-[5%] h-[55%] w-[40%] rounded-full opacity-80 blur-3xl [animation-delay:-14s]"
-        style={{ background: d }}
-      />
-      <div className="absolute left-[18%] top-[12%] h-[40%] w-[30%] rounded-full bg-white/70 blur-3xl dark:bg-white/10" />
-      {/* grain */}
-      <svg className="absolute inset-0 h-full w-full opacity-[0.35] mix-blend-overlay">
+    <div aria-hidden className={cn("pointer-events-none absolute inset-x-0 top-0 h-full max-h-[1100px] overflow-hidden", className)}>
+      <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${a} 0%, ${a} 35%, transparent 75%)`, opacity: 0.75 }} />
+      <div className={cn(puff, "-left-[12%] -top-[18%] h-[520px] w-[46vw]")} style={{ background: b }} />
+      <div className={cn(puff, "-right-[10%] -top-[12%] h-[560px] w-[44vw] [animation-delay:-8s]")} style={{ background: c }} />
+      <div className={cn(puff, "left-[2%] top-[22%] h-[300px] w-[26vw] opacity-80 [animation-delay:-4s]")} style={{ background: c }} />
+      <div className={cn(puff, "right-[4%] top-[26%] h-[320px] w-[28vw] opacity-80 [animation-delay:-12s]")} style={{ background: b }} />
+      <div className={cn(puff, "left-[34%] top-[2%] h-[260px] w-[30vw] opacity-70 [animation-delay:-14s]")} style={{ background: d }} />
+      <div className={cn(puff, "left-[20%] top-[8%] h-[220px] w-[18vw] bg-white/60 dark:bg-white/5")} />
+      <div className={cn(puff, "right-[22%] top-[14%] h-[200px] w-[16vw] bg-white/50 dark:bg-white/5 [animation-delay:-6s]")} />
+      {/* grain + dither */}
+      <svg className="absolute inset-0 h-full w-full opacity-40 mix-blend-overlay">
         <filter id="grain">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
           <feColorMatrix type="saturate" values="0" />
         </filter>
         <rect width="100%" height="100%" filter="url(#grain)" />
       </svg>
-      <div className="absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-b from-transparent via-paper/85 to-paper" />
+      <div className="dots absolute inset-x-0 top-0 h-[55%] text-white opacity-20 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+      <div className="absolute inset-x-0 bottom-0 h-[70%] bg-gradient-to-b from-transparent via-paper/90 to-paper" />
     </div>
   );
 }

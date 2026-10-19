@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, type ComponentProps } from "react";
 import { Copy, Check } from "lucide-react";
-import { codeToHtml } from "shiki/bundle/web";
+import { bundledLanguages, codeToHtml } from "shiki/bundle/web";
 import { cn } from "@/lib/utils";
 
 type CodeBlockProps = ComponentProps<"pre">;
@@ -33,7 +33,7 @@ export function CodeBlock({ children, ...props }: CodeBlockProps) {
     const nextClassName = codeEl.className || "";
 
     void codeToHtml(codeText, {
-      lang: lang as any,
+      lang: lang in bundledLanguages ? lang : "text",
       themes: {
         light: "github-light",
         dark: "github-dark",

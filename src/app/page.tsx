@@ -41,7 +41,7 @@ export default function Page() {
   return (
     <>
       {/* ---------------------------------------------------------- HERO */}
-      <section className="relative min-h-[100svh] overflow-hidden pb-20 pt-24 sm:pt-28">
+      <section className="relative overflow-hidden pb-28 pt-24 sm:pb-36 sm:pt-28">
         <CloudSky />
         <Base64Rail text={`${DATA.name} // ${DATA.description}`} className="absolute left-6 top-[38%] hidden max-h-[55%] overflow-hidden lg:block" />
         <Base64Rail text="robots · digital twins · edge intelligence" className="absolute right-6 top-[38%] hidden max-h-[55%] overflow-hidden lg:block" />
@@ -107,7 +107,7 @@ export default function Page() {
               <div className="relative grid gap-5 lg:grid-cols-[230px_1fr_200px]">
                 {/* left column */}
                 <div className="flex flex-col gap-5">
-                  <Window title="Whoami" tone="chrome" bodyClassName="p-2">
+                  <Window title="Whoami" tone="chrome" className="max-w-[260px] lg:max-w-none" bodyClassName="p-2">
                     <div className="relative aspect-square overflow-hidden border border-ink bg-paper">
                       <img
                         src={DATA.avatarUrl}
@@ -126,7 +126,7 @@ export default function Page() {
                     <ul className="mono-xs space-y-1">
                       <li>▸ digital twins from phone video</li>
                       <li>▸ humanoid sim + teleop for Asimov 1</li>
-                      <li>▸ on-device inference @ OpenHorizon</li>
+                      <li>▸ sim-to-real tooling @ OpenHorizon Labs</li>
                       <li>▸ writing The Artful Eye on Quora</li>
                     </ul>
                   </Window>
@@ -176,7 +176,7 @@ export default function Page() {
                   <GliderWidget />
                   <Window title="Status" tone="ink" bodyClassName="px-2 py-1.5">
                     <div className="mono-xs flex items-center gap-2">
-                      <span className="size-2 animate-pulse bg-signal" /> open to internships
+                      <span className="size-2 animate-pulse bg-signal" /> shipping · {posts.length} posts
                     </div>
                   </Window>
                 </div>
@@ -359,7 +359,9 @@ export default function Page() {
                       ))}
                     </div>
                   </div>
-                  <p className="text-[15px] leading-relaxed text-paper/75">{w.description}</p>
+                  <div className="text-[15px] leading-relaxed text-paper/75">
+                    <Markdown components={{ p: ({ children }) => <p>{children}</p> }}>{w.description}</Markdown>
+                  </div>
                 </a>
               </li>
             ))}

@@ -5,7 +5,7 @@ import { Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 const NAV = [
   { href: "/#projects", label: "Projects" },
@@ -19,8 +19,11 @@ const tab =
 
 export function ThemeSwitch({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const dark = mounted && resolvedTheme === "dark";
   return (
     <button
@@ -36,8 +39,9 @@ export function ThemeSwitch({ className }: { className?: string }) {
 
 export function SiteHeader({ email }: { email: string }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  useEffect(() => setOpen(false), [pathname]);
+  // The menu belongs to the page it was opened on, so navigating closes it
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn === pathname;
 
   const isActive = (href: string) =>
     href === "/blog" ? pathname.startsWith("/blog") : href === pathname;
@@ -75,7 +79,7 @@ export function SiteHeader({ email }: { email: string }) {
             className={cn(tab, "w-8 justify-center px-0 md:hidden")}
             aria-expanded={open}
             aria-label="Menu"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => setOpenOn(open ? null : pathname)}
           >
             {open ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>

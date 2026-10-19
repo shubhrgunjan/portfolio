@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/lib/site";
 import { Base64Rail, CloudSky } from "@/components/os/decor";
 import { PostCard } from "@/components/os/post-card";
 import { PostCover } from "@/components/os/post-cover";
@@ -45,14 +46,14 @@ export async function generateMetadata({
       description,
       type: "article",
       publishedTime,
-      url: `${DATA.url}/blog/${slug}`,
-      ...(image && { images: [{ url: `${DATA.url}${image}` }] }),
+      url: `${SITE_URL}/blog/${slug}`,
+      ...(image && { images: [{ url: `${SITE_URL}${image}` }] }),
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      ...(image && { images: [`${DATA.url}${image}`] }),
+      ...(image && { images: [`${SITE_URL}${image}`] }),
     },
   };
 }
@@ -79,8 +80,8 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     datePublished: post.publishedAt,
     dateModified: post.updatedAt ?? post.publishedAt,
     description: post.summary,
-    image: post.image ? `${DATA.url}${post.image}` : `${DATA.url}/blog/${slug}/opengraph-image`,
-    url: `${DATA.url}/blog/${slug}`,
+    image: post.image ? `${SITE_URL}${post.image}` : `${SITE_URL}/blog/${slug}/opengraph-image`,
+    url: `${SITE_URL}/blog/${slug}`,
     author: { "@type": "Person", name: DATA.name },
   }).replace(/</g, "\\u003c");
 
