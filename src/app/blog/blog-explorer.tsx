@@ -30,10 +30,10 @@ export function BlogExplorer({
 
   return (
     <div>
-      <div className="sticky top-10 z-20 mb-10 border border-ink bg-paper shadow-[4px_4px_0_0_var(--ink)]">
-        <div className="flex items-center justify-between bg-ink px-1.5 py-[3px] text-paper">
+      <div className="sticky top-14 z-20 mb-10 border border-ink bg-paper">
+        <div className="flex h-7 items-center justify-between border-b border-ink px-2">
           <span className="mono-xs">Finder.app</span>
-          <span className="mono-xs opacity-70">
+          <span className="mono-xs text-muted-foreground">
             {visible.length}/{items.length} posts
           </span>
         </div>
@@ -53,7 +53,7 @@ export function BlogExplorer({
               onClick={() => setTag(null)}
               className={cn(
                 "mono-xs shrink-0 border border-ink px-2 py-1.5",
-                !tag ? "bg-ink text-paper" : "hover:bg-pink hover:text-[#1e1e1e]"
+                !tag ? "bg-ink text-paper" : "hover:bg-lime hover:text-[#16141f]"
               )}
             >
               all
@@ -65,7 +65,7 @@ export function BlogExplorer({
                 onClick={() => setTag(tag === t.tag ? null : t.tag)}
                 className={cn(
                   "mono-xs shrink-0 border border-ink px-2 py-1.5",
-                  tag === t.tag ? "bg-ink text-paper" : "hover:bg-pink hover:text-[#1e1e1e]"
+                  tag === t.tag ? "bg-ink text-paper" : "hover:bg-lime hover:text-[#16141f]"
                 )}
               >
                 #{t.tag} <span className="opacity-60">{t.count}</span>

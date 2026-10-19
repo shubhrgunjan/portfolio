@@ -414,7 +414,7 @@ export function Editor({ slugs: initialSlugs, mode }: { slugs: string[]; mode: "
           type="button"
           onClick={publish}
           disabled={pending}
-          className="flex h-8 items-center gap-1.5 bg-ink px-3 text-sm font-semibold text-paper hover:bg-pink hover:text-[#1e1e1e] disabled:opacity-60"
+          className="flex h-8 items-center gap-1.5 bg-ink px-3 text-sm font-semibold text-paper hover:bg-lime hover:text-[#16141f] disabled:opacity-60"
         >
           <Rocket className="size-3.5" />
           {pending ? "Working…" : mode === "none" ? "Download" : current ? "Update" : "Publish"}
@@ -428,7 +428,7 @@ export function Editor({ slugs: initialSlugs, mode }: { slugs: string[]; mode: "
         <div
           className={cn(
             "mono-xs flex flex-wrap items-center gap-3 border border-ink px-3 py-2",
-            status?.tone === "err" ? "bg-orange text-[#1e1e1e]" : status?.tone === "ok" ? "bg-mint text-[#1e1e1e]" : "bg-chrome"
+            status?.tone === "err" ? "bg-orange text-[#16141f]" : status?.tone === "ok" ? "bg-mint text-[#16141f]" : "bg-chrome"
           )}
         >
           {status && <span>{status.text}</span>}
@@ -553,14 +553,14 @@ export function Editor({ slugs: initialSlugs, mode }: { slugs: string[]; mode: "
           <Window title="body.mdx" tone="paper" className="flex min-h-[60vh] flex-col overflow-hidden lg:min-h-0" bodyClassName="flex min-h-0 flex-1 flex-col">
             <div className="scrollbar-none flex shrink-0 gap-1 overflow-x-auto border-b border-ink bg-chrome p-1.5">
               {SNIPPETS.map((s) => (
-                <button key={s.label} type="button" onClick={() => insert(s.text, s.block)} className="mono-xs shrink-0 border border-ink bg-paper px-1.5 py-1 hover:bg-pink hover:text-[#1e1e1e]">
+                <button key={s.label} type="button" onClick={() => insert(s.text, s.block)} className="mono-xs shrink-0 border border-ink bg-paper px-1.5 py-1 hover:bg-lime hover:text-[#16141f]">
                   {s.label}
                 </button>
               ))}
               <button
                 type="button"
                 onClick={() => fileInput.current?.click()}
-                className="mono-xs flex shrink-0 items-center gap-1 border border-ink bg-ink px-1.5 py-1 text-paper hover:bg-pink hover:text-[#1e1e1e]"
+                className="mono-xs flex shrink-0 items-center gap-1 border border-ink bg-ink px-1.5 py-1 text-paper hover:bg-lime hover:text-[#16141f]"
               >
                 <ImagePlus className="size-3" /> Image
               </button>
@@ -672,7 +672,7 @@ function Preview({ meta, body, assets }: { meta: Meta; body: string; assets: Rec
       <PostCover slug={meta.slug || "untitled"} accent={meta.accent} image={meta.image ? assets[meta.image] ?? meta.image : undefined} className="aspect-[21/7] border-b border-ink" />
       <div className="px-6 py-8">
         {error ? (
-          <div className="border border-ink bg-orange p-3 font-mono text-xs text-[#1e1e1e]">
+          <div className="border border-ink bg-orange p-3 font-mono text-xs text-[#16141f]">
             <div className="mb-1 font-bold">MDX error</div>
             {error}
           </div>
@@ -685,8 +685,8 @@ function Preview({ meta, body, assets }: { meta: Meta; body: string; assets: Rec
   );
 }
 
-const btn = "flex h-8 items-center gap-1 border border-ink bg-paper px-2 text-sm hover:bg-pink hover:text-[#1e1e1e]";
-const input = "h-8 w-full border border-ink bg-paper px-2 text-sm outline-none focus:shadow-[3px_3px_0_0_var(--magenta)]";
+const btn = "flex h-8 items-center gap-1 border border-ink bg-paper px-2 text-sm hover:bg-lime hover:text-[#16141f]";
+const input = "h-8 w-full border border-ink bg-paper px-2 text-sm outline-none focus:shadow-[3px_3px_0_0_var(--uv)]";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (

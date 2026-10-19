@@ -69,15 +69,15 @@ export function CodeBlock({ children, ...props }: CodeBlockProps) {
   const lang = extractLanguage(className);
 
   return (
-    <div className="not-prose group relative my-8 border border-ink bg-paper shadow-[4px_4px_0_0_var(--ink)]">
-      <div className="flex items-center justify-between gap-3 bg-ink px-1.5 py-[3px] text-paper">
+    <div className="not-prose group relative my-8 border border-ink bg-paper">
+      <div className="flex h-8 items-center justify-between gap-3 border-b border-ink bg-chrome px-2">
         <span className="mono-xs truncate">{title ?? `untitled.${lang === "plaintext" ? "txt" : lang}`}</span>
         <span className="flex items-center gap-2">
-          <span className="mono-xs uppercase opacity-60">{lang}</span>
+          <span className="mono-xs uppercase text-muted-foreground">{lang}</span>
           <button
             type="button"
             onClick={handleCopy}
-            className="mono-xs flex items-center gap-1 bg-paper px-1.5 text-ink transition-colors hover:bg-pink"
+            className="mono-xs flex items-center gap-1 border border-ink bg-paper px-1.5 text-ink transition-colors hover:bg-lime hover:text-[#16141f]"
             aria-label="Copy code"
           >
             {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
@@ -89,7 +89,7 @@ export function CodeBlock({ children, ...props }: CodeBlockProps) {
         ref={preRef}
         {...props}
         className={cn(
-          "m-[3px]! overflow-x-auto border border-ink bg-[#fafafa]! p-0! dark:bg-[#0b0b0b]!",
+          "m-0! overflow-x-auto bg-paper! p-0!",
           props.className
         )}
       >

@@ -1,5 +1,6 @@
 import { SITE_URL } from "@/lib/site";
-import { Base64Rail, CloudSky } from "@/components/os/decor";
+import { DimLine } from "@/components/os/decor";
+import { Reveal } from "@/components/os/motion";
 import { PostCard } from "@/components/os/post-card";
 import { PostCover } from "@/components/os/post-cover";
 import { Tag, Window } from "@/components/os/window";
@@ -13,16 +14,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ReadingProgress, Toc } from "./toc";
-
-const PALETTES: Record<string, string[]> = {
-  pink: ["var(--sky)", "var(--magenta)", "var(--pink)", "var(--violet)"],
-  sky: ["var(--sky)", "var(--violet)", "var(--sky)", "var(--mint)"],
-  violet: ["var(--violet)", "var(--magenta)", "var(--sky)", "var(--pink)"],
-  lime: ["var(--mint)", "var(--lime)", "var(--sky)", "var(--lime)"],
-  orange: ["var(--pink)", "var(--orange)", "var(--magenta)", "var(--orange)"],
-  mint: ["var(--sky)", "var(--mint)", "var(--lime)", "var(--sky)"],
-  magenta: ["var(--violet)", "var(--magenta)", "var(--pink)", "var(--magenta)"],
-};
 
 export async function generateStaticParams() {
   return getPosts().map((post) => ({ slug: post.slug }));
@@ -94,91 +85,81 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
       />
       <ReadingProgress />
 
-      <header className="relative overflow-hidden pb-12 pt-24 sm:pt-32">
-        <CloudSky palette={PALETTES[post.accent]} />
-        <Base64Rail text={post.title} className="absolute left-4 top-28 hidden max-h-[70%] overflow-hidden xl:block" />
+      <header className="relative overflow-hidden border-b border-ink/10 pb-14 pt-20 sm:pt-24">
+        <div aria-hidden className="absolute right-[-10%] top-[-20%] h-[90%] w-[60%] rounded-full bg-[var(--a)] opacity-40 blur-[120px] dark:opacity-20" />
+        <div aria-hidden className="absolute inset-0 bg-[linear-gradient(to_right,var(--hairline)_1px,transparent_1px),linear-gradient(to_bottom,var(--hairline)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:linear-gradient(to_bottom,black,transparent)] opacity-60" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-8">
           <Link
             href="/blog"
-            className="mono-xs inline-flex items-center gap-1 bg-paper px-2 py-1 shadow-[0_0_0_1px_var(--ink)] hover:bg-ink hover:text-paper"
+            className="mono-xs inline-flex items-center gap-1 border border-ink/20 bg-paper/70 px-2 py-1 backdrop-blur hover:border-ink"
           >
-            <ChevronLeft className="size-3" /> All thoughts
+            <ChevronLeft className="size-3" /> all thoughts
           </Link>
-          <div className="mt-10 flex flex-wrap items-center gap-2">
-            {post.kicker && <Tag>{post.kicker}</Tag>}
-            {post.tags.map((t) => (
-              <span key={t} className="mono-xs bg-paper/70 px-1.5 py-[2px] backdrop-blur">
-                #{t}
-              </span>
-            ))}
-          </div>
-          <h1 className="font-display mt-6 max-w-5xl text-balance text-[clamp(2.6rem,7vw,6rem)]">{post.title}</h1>
-          <p className="mt-6 max-w-2xl text-lg font-medium leading-snug tracking-tight text-ink-soft">{post.summary}</p>
-
-          <div className="mt-10 grid gap-4 sm:grid-cols-[auto_1fr] sm:items-end">
-            <Window title="Post.info" tone="chrome" bodyClassName="px-3 py-2">
-              <dl className="mono-xs grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[12px]">
-                <dt className="opacity-60">author</dt>
-                <dd>{post.author ?? DATA.name}</dd>
-                <dt className="opacity-60">published</dt>
-                <dd>{formatDate(post.publishedAt)}</dd>
+          <div className="mt-8 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+            <Reveal>
+              <div className="flex flex-wrap items-center gap-2">
+                {post.kicker && <Tag>{post.kicker}</Tag>}
+                {post.tags.map((t) => (
+                  <span key={t} className="mono-xs text-muted-foreground">
+                    #{t}
+                  </span>
+                ))}
+              </div>
+              <h1 className="font-display mt-6 text-balance text-[clamp(2.4rem,5.4vw,4.6rem)]">{post.title}</h1>
+              <p className="mt-6 max-w-2xl text-lg leading-snug text-ink-soft">{post.summary}</p>
+              <dl className="mono-xs mt-8 flex flex-wrap gap-x-6 gap-y-1">
+                <div><dt className="inline text-muted-foreground">by </dt><dd className="inline">{post.author ?? DATA.name}</dd></div>
+                <div><dt className="inline text-muted-foreground">published </dt><dd className="inline">{formatDate(post.publishedAt)}</dd></div>
                 {post.updatedAt && (
-                  <>
-                    <dt className="opacity-60">updated</dt>
-                    <dd>{formatDate(post.updatedAt)}</dd>
-                  </>
+                  <div><dt className="inline text-muted-foreground">updated </dt><dd className="inline">{formatDate(post.updatedAt)}</dd></div>
                 )}
-                <dt className="opacity-60">read</dt>
-                <dd>{post.readingTime} min</dd>
+                <div><dt className="inline text-muted-foreground">read </dt><dd className="inline">{post.readingTime} min</dd></div>
               </dl>
-            </Window>
-            <div className="flex flex-wrap gap-2 sm:justify-end">
-              {post.repo && (
-                <a
-                  href={post.repo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 bg-ink px-3 py-2 text-sm font-semibold text-paper hover:bg-[var(--a)] hover:text-[#1e1e1e]"
-                >
-                  Source <ArrowUpRight className="size-4" />
-                </a>
-              )}
-              {post.demo && (
-                <a
-                  href={post.demo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 bg-paper px-3 py-2 text-sm font-semibold shadow-[0_0_0_1px_var(--ink)] hover:bg-[var(--a)] hover:text-[#1e1e1e]"
-                >
-                  Live demo <ArrowUpRight className="size-4" />
-                </a>
-              )}
-            </div>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {post.repo && (
+                  <a
+                    href={post.repo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-10 items-center gap-1 bg-ink px-4 text-sm font-semibold text-paper hover:bg-[var(--a)] hover:text-[#16141f]"
+                  >
+                    Source <ArrowUpRight className="size-4" />
+                  </a>
+                )}
+                {post.demo && (
+                  <a
+                    href={post.demo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-10 items-center gap-1 border border-ink px-4 text-sm font-semibold hover:bg-[var(--a)] hover:text-[#16141f]"
+                  >
+                    Live demo <ArrowUpRight className="size-4" />
+                  </a>
+                )}
+              </div>
+            </Reveal>
+            <Reveal delay={150}>
+              <Window title={`${post.slug}.svg`} meta="live figure" className="shadow-[8px_8px_0_0_var(--a)]" bodyClassName="p-0">
+                <PostCover slug={post.slug} accent={post.accent} image={post.image} className="aspect-[16/9]" />
+              </Window>
+            </Reveal>
           </div>
+          <DimLine className="mt-12" label={`${post.headings.length} sections · ${post.readingTime} min · ${post.tags.length} tags`} />
         </div>
       </header>
-
-      <div className="mx-auto max-w-6xl px-4 sm:px-8">
-        <PostCover
-          slug={post.slug}
-          accent={post.accent}
-          image={post.image}
-          className="aspect-[21/7] border border-ink shadow-[6px_6px_0_0_var(--ink)]"
-        />
-      </div>
 
       <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-24 pt-12 sm:px-8 lg:grid-cols-[minmax(0,1fr)_260px]">
         <article id="article" className="prose prose-os max-w-[46rem] dark:prose-invert">
           <MDXContent code={post.mdx} components={mdxComponents} />
         </article>
         <aside className="hidden lg:block">
-          <div className="sticky top-16 space-y-6">
+          <div className="sticky top-20 space-y-6">
             <Toc headings={post.headings} />
             {next && next.slug !== slug && (
               <Link
                 href={`/blog/${next.slug}`}
                 data-accent={next.accent}
-                className="block border border-ink bg-[var(--a)] p-3 text-[#1e1e1e] shadow-[4px_4px_0_0_var(--ink)] transition-transform hover:-translate-y-0.5"
+                className="block border border-ink bg-[var(--a)] p-3 text-[#16141f] transition-transform hover:-translate-y-0.5"
               >
                 <div className="mono-xs">Up next →</div>
                 <div className="font-display mt-2 text-xl leading-tight">{next.title}</div>

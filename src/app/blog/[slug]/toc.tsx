@@ -45,12 +45,12 @@ export function Toc({ headings }: { headings: Heading[] }) {
   if (!headings.length) return null;
 
   return (
-    <nav aria-label="Table of contents" className="border border-ink bg-paper shadow-[4px_4px_0_0_var(--ink)]">
-      <div className="flex items-center justify-between bg-ink px-1.5 py-[3px] text-paper">
+    <nav aria-label="Table of contents" className="border border-ink bg-paper">
+      <div className="flex h-7 items-center justify-between border-b border-ink px-2">
         <span className="mono-xs">Contents.toc</span>
-        <span aria-hidden className="size-2.5 border border-paper/80" />
+        <span aria-hidden className="mono-xs text-muted-foreground">§</span>
       </div>
-      <ol className="m-[3px] max-h-[60vh] overflow-y-auto border border-ink py-1">
+      <ol className="max-h-[60vh] overflow-y-auto py-1">
         {headings.map((h) => (
           <li key={h.id}>
             <a

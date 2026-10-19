@@ -11,7 +11,9 @@
 
 ## 🌟 Highlights
 
-- **SG//OS design system:** a light-first, typesafe.ai-inspired look (cloud-gradient heroes, retro OS window chrome, halftone dithering, oversized grotesk headlines, salmon "desktop" sections) with a matching dark mode.
+- **SG//OS "Calibration" design system:** an original visual language drawn from robotics and vision work (calibration checkerboards, ArUco fiducials, colour charts, dimension lines, live telemetry), with ultraviolet + lime tokens, Bricolage Grotesque/Geist type and a matching dark mode. Documented in [docs/DESIGN.md](docs/DESIGN.md) and live at `/design`.
+- **14 animated vector illustrations:** every project has a hand-drawn SVG figure instead of a screenshot; figures animate only while on screen and speed up on hover.
+- **Motion:** headline rise, rotating verb, scroll reveals, decode labels, count-ups, a spring-animated nav and a scroll-progress bar, all respecting `prefers-reduced-motion`.
 - **13 code-grounded deep-dives:** every project post was written from the actual repository (real excerpts, measured numbers only), ranked best-first: Parallax, VASIMOV, the Asimov 3D teleop suite, UIKey, EdgeMed, AndroPlay, Nyaya Flow and more.
 - **In-site blog editor at `/write`:** password-protected, live MDX preview, component toolbar, image drag-and-drop, local autosave, and one-click publish that commits to GitHub so Vercel redeploys. See [docs/WRITING.md](docs/WRITING.md).
 - **Blog features:** search and tag filter, featured ranking, generated halftone covers, sticky table of contents, reading progress, related posts and an RSS feed at `/rss.xml`.
@@ -63,7 +65,7 @@ Deploy this portfolio to Vercel with zero extra configuration:
 
 - **Framework:** [Next.js 16](https://nextjs.org/) (App Router, Turbopack, server actions)
 - **Styling:** [Tailwind CSS v4](https://tailwindcss.com/) with custom SG//OS tokens (`src/app/globals.css`, `src/components/os/`)
-- **Type:** Inter Tight (display), Inter (body), JetBrains Mono (labels)
+- **Type:** Bricolage Grotesque (display), Geist (body), Geist Mono (labels)
 - **Content:** [Content Collections](https://www.content-collections.dev/) + MDX, Shiki highlighting, `@mdx-js/mdx` for live preview
 - **Logos:** [Simple Icons](https://simpleicons.org/) and [Lucide](https://lucide.dev/)
 

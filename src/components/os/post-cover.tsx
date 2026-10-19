@@ -1,4 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
+import { ProjectArt } from "@/components/art";
+import { ART_SLUGS } from "@/components/art/slugs";
 import { cn } from "@/lib/utils";
 
 function hash(s: string) {
@@ -28,6 +30,17 @@ export function PostCover({
   label?: string;
   className?: string;
 }) {
+  // Every project has a hand-drawn vector illustration; the halftone cover is the fallback.
+  if (ART_SLUGS.includes(slug)) {
+    return (
+      <div data-accent={accent} className={cn("relative overflow-hidden bg-[var(--a)]", className)}>
+        <ProjectArt slug={slug} accent={accent} />
+        {label && (
+          <span className="mono-xs absolute bottom-2 left-2 border border-[#16141f] bg-[#fafaf7] px-1.5 text-[#16141f]">{label}</span>
+        )}
+      </div>
+    );
+  }
   const rand = hash(slug);
   const blobs = Array.from({ length: 3 }, () => ({
     x: `${Math.round(rand() * 80 - 15)}%`,
@@ -39,7 +52,7 @@ export function PostCover({
   return (
     <div
       data-accent={accent}
-      className={cn("relative isolate overflow-hidden bg-[var(--a)] text-[#1e1e1e]", className)}
+      className={cn("relative isolate overflow-hidden bg-[var(--a)] text-[#16141f]", className)}
     >
       {image ? (
         <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
@@ -59,14 +72,14 @@ export function PostCover({
                 left: b.x,
                 top: b.y,
                 width: b.size,
-                background: "radial-gradient(circle, #1e1e1e 0%, #1e1e1e 25%, transparent 70%)",
+                background: "radial-gradient(circle, #16141f 0%, #16141f 25%, transparent 70%)",
               }}
             />
           ))}
         </>
       )}
       {label && (
-        <span className="mono-xs absolute left-2 top-2 bg-[#1e1e1e] px-1.5 py-[2px] text-[#fefefe]">{label}</span>
+        <span className="mono-xs absolute bottom-2 left-2 border border-[#16141f] bg-[#fafaf7] px-1.5 text-[#16141f]">{label}</span>
       )}
     </div>
   );

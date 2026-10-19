@@ -6,23 +6,22 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { DATA } from "@/data/resume";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
-import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const body = Inter({
+const body = Geist({
   subsets: ["latin"],
   variable: "--font-body",
 });
 
-const display = Inter_Tight({
+const display = Bricolage_Grotesque({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  axes: ["wdth", "opsz"],
   variable: "--font-display-face",
 });
 
-const mono = JetBrains_Mono({
+const mono = Geist_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
   variable: "--font-mono-face",
 });
 

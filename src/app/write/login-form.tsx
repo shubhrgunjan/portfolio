@@ -25,13 +25,13 @@ export function LoginForm() {
           autoFocus
           required
           autoComplete="current-password"
-          className="h-11 border border-ink bg-paper px-3 font-mono outline-none focus:shadow-[3px_3px_0_0_var(--magenta)]"
+          className="h-11 border border-ink bg-paper px-3 font-mono outline-none focus:shadow-[3px_3px_0_0_var(--uv)]"
         />
         {error && <p className="mono-xs bg-ink px-2 py-1 text-pink">{error}</p>}
         <button
           type="submit"
           disabled={pending}
-          className="h-11 bg-ink font-semibold text-paper transition-colors hover:bg-pink hover:text-[#1e1e1e] disabled:opacity-60"
+          className="h-11 bg-ink font-semibold text-paper transition-colors hover:bg-lime hover:text-[#16141f] disabled:opacity-60"
         >
           {pending ? "Checking…" : "Unlock editor"}
         </button>

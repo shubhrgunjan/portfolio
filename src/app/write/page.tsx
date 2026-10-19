@@ -1,4 +1,4 @@
-import { CloudSky } from "@/components/os/decor";
+import { PlotField } from "@/components/os/decor";
 import { Window } from "@/components/os/window";
 import { authConfigured, isAuthed } from "@/lib/auth";
 import { listPostFiles, storeMode } from "@/lib/content-store";
@@ -57,7 +57,7 @@ GITHUB_BRANCH=main`}
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden px-4 py-32">
-      <CloudSky />
+      <PlotField />
       <div className="relative w-full max-w-lg">{children}</div>
     </section>
   );

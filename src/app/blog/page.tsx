@@ -1,4 +1,5 @@
-import { Base64Rail, CloudSky, Leader } from "@/components/os/decor";
+import { DimLine, PlotField } from "@/components/os/decor";
+import { Decode, Reveal } from "@/components/os/motion";
 import { PostCard } from "@/components/os/post-card";
 import { PostCover } from "@/components/os/post-cover";
 import { Tag } from "@/components/os/window";
@@ -25,26 +26,29 @@ export default function BlogPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden pb-16 pt-28 sm:pt-36">
-        <CloudSky palette={["var(--violet)", "var(--sky)", "var(--magenta)", "var(--pink)"]} />
-        <Base64Rail text="Field notes from the build. Shubhr Gunjan." className="absolute left-4 top-28 hidden lg:block" />
+      <section className="relative overflow-hidden border-b border-ink/10 pb-16 pt-24 sm:pt-32">
+        <PlotField cx={1180} cy={380} />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
-          <Leader left="Thoughts" right={`${posts.length} deep-dives`} className="mb-8" />
-          <h1 className="font-display mx-auto max-w-5xl text-center text-[clamp(3rem,10vw,8.5rem)]">
-            Field Notes From The Build.
-          </h1>
-          <p className="mx-auto mt-6 max-w-xl text-center text-lg font-medium leading-snug tracking-tight">
-            {description}
-          </p>
+          <Reveal>
+            <p className="mono-xs flex items-center gap-3">
+              <span className="bg-ink px-1.5 text-paper">{String(posts.length).padStart(2, "0")}</span>
+              <Decode text="field notes · written from the code up" />
+            </p>
+            <h1 className="font-display mt-6 max-w-4xl text-[clamp(3rem,9vw,8rem)]">Field notes from the build.</h1>
+            <p className="mt-6 max-w-xl text-lg leading-snug text-ink-soft">{description}</p>
+          </Reveal>
+          <DimLine className="mt-12 max-w-3xl" label={`${posts.length} posts · ${tags.length} tags · ${posts.reduce((n, p) => n + p.readingTime, 0)} min`} />
         </div>
       </section>
+
+      <div className="h-12" />
 
       {lead && (
         <section className="mx-auto max-w-7xl px-4 sm:px-8">
           <Link
             href={`/blog/${lead.slug}`}
             data-accent={lead.accent}
-            className="group grid border border-ink bg-paper shadow-[6px_6px_0_0_var(--ink)] transition-shadow hover:shadow-[10px_10px_0_0_var(--a)] md:grid-cols-[1.25fr_1fr]"
+            className="group/panel group relative grid border border-ink bg-paper transition-all duration-300 hover:-translate-y-1 hover:shadow-[10px_10px_0_0_var(--a)] md:grid-cols-[1.25fr_1fr]"
           >
             <PostCover
               slug={lead.slug}
@@ -61,7 +65,7 @@ export default function BlogPage() {
                 <span>{formatDate(lead.publishedAt)}</span>
                 <span>•</span>
                 <span>{lead.readingTime} min read</span>
-                <span className="ml-auto bg-ink px-2 py-1 text-paper transition-colors group-hover:bg-[var(--a)] group-hover:text-[#1e1e1e]">
+                <span className="ml-auto bg-ink px-2 py-1 text-paper transition-colors group-hover:bg-[var(--a)] group-hover:text-[#16141f]">
                   Read the post →
                 </span>
               </div>

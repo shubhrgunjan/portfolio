@@ -118,7 +118,7 @@ export function GliderWidget({ className, size = 18 }: { className?: string; siz
         ref={ref}
         width={size * CELL}
         height={size * CELL}
-        className="block text-[#1e1e1e]"
+        className="block text-[#16141f]"
         aria-label="Conway's Game of Life animation"
       />
       <div className="mono-xs mt-1">Game of Life</div>

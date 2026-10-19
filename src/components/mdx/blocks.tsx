@@ -5,10 +5,10 @@ import { AlertTriangle, ArrowUpRight, Info, Lightbulb, Sparkles } from "lucide-r
 import type { ReactNode } from "react";
 
 const CALLOUTS = {
-  note: { icon: Info, label: "Note", cls: "bg-sky text-[#1e1e1e]" },
-  tip: { icon: Lightbulb, label: "Tip", cls: "bg-lime text-[#1e1e1e]" },
-  warn: { icon: AlertTriangle, label: "Heads up", cls: "bg-orange text-[#1e1e1e]" },
-  insight: { icon: Sparkles, label: "Insight", cls: "bg-pink text-[#1e1e1e]" },
+  note: { icon: Info, label: "Note", cls: "bg-sky text-[#16141f]" },
+  tip: { icon: Lightbulb, label: "Tip", cls: "bg-lime text-[#16141f]" },
+  warn: { icon: AlertTriangle, label: "Heads up", cls: "bg-orange text-[#16141f]" },
+  insight: { icon: Sparkles, label: "Insight", cls: "bg-pink text-[#16141f]" },
 } as const;
 
 export function Callout({
@@ -23,7 +23,7 @@ export function Callout({
   const c = CALLOUTS[type] ?? CALLOUTS.note;
   const Icon = c.icon;
   return (
-    <aside className="not-prose my-8 border border-ink bg-paper shadow-[4px_4px_0_0_var(--ink)]">
+    <aside className="not-prose my-8 border border-ink bg-paper">
       <div className={cn("flex items-center gap-2 border-b border-ink px-3 py-1.5", c.cls)}>
         <Icon className="size-3.5" />
         <span className="mono-xs font-medium uppercase">{c.label}</span>
@@ -66,7 +66,7 @@ export function StatGrid({ children }: { children: ReactNode }) {
 
 export function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="group relative border-b border-r border-ink p-4 transition-colors hover:bg-[var(--a,var(--pink))] hover:text-[#1e1e1e]">
+    <div className="group relative border-b border-r border-ink p-4 transition-colors hover:bg-[var(--a,var(--pink))] hover:text-[#16141f]">
       <div className="font-display text-[clamp(1.8rem,4vw,2.8rem)] leading-none">{value}</div>
       <div className="mono-xs mt-3 opacity-80">{label}</div>
     </div>
@@ -150,7 +150,7 @@ export function RepoCard({ repo, description }: { repo: string; description?: st
       <div className="px-3 py-4">
         <div className="font-display text-3xl">{name}</div>
         {description && <p className="mt-2 max-w-prose text-sm text-paper/70">{description}</p>}
-        <div className="mono-xs mt-4 inline-block bg-[var(--a,var(--pink))] px-1.5 py-[2px] text-[#1e1e1e]">
+        <div className="mono-xs mt-4 inline-block bg-[var(--a,var(--pink))] px-1.5 py-[2px] text-[#16141f]">
           $ git clone https://github.com/{repo}
         </div>
       </div>
