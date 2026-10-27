@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function ResumePage() {
   return (
-    <div className="flex flex-col gap-6 w-full max-w-3xl mx-auto px-4 pt-20 pb-16">
+    <div className="flex flex-col gap-6 w-full max-w-3xl mx-auto px-4 pt-24 pb-16 sm:pt-28">
       {/* Top Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-border">
         <Link

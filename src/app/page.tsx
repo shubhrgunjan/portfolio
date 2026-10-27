@@ -1,446 +1,218 @@
 /* eslint-disable @next/next/no-img-element */
-import { ProjectArt } from "@/components/art";
-import { CalibrationStrip, DimLine, HalftoneBlobs, PlotField, RiseText, RuleBlock } from "@/components/os/decor";
-import { CountUp, Decode, Reveal, Telemetry, WordCycle } from "@/components/os/motion";
-import { PostCard } from "@/components/os/post-card";
-import { Showcase } from "@/components/os/showcase";
-import { TechLogo, techIcon } from "@/components/os/tech-logo";
-import { CornerMarks, Tag, Window } from "@/components/os/window";
+import { PillLink, PostRow, ProjectCard, Row, SectionTitle, splitTitle } from "@/components/mono/blocks";
+import { ContributionGraph } from "@/components/mono/contribution-graph";
+import { LocalTime } from "@/components/mono/local-time";
+import { Toolkit } from "@/components/mono/toolkit";
+import { Reveal } from "@/components/os/motion";
 import { DATA } from "@/data/resume";
-import { getPost, getPosts, getRankedPosts } from "@/lib/posts";
-import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
+import { getContributions } from "@/lib/github";
+import { getRankedPosts } from "@/lib/posts";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import Markdown from "react-markdown";
 
 const projects = [...DATA.projects].sort((a, b) => a.rank - b.rank);
+const FEATURED = 6;
 
-const STACK = [
-  "Python", "PyTorch", "NumPy", "ONNX", "TypeScript", "React", "Next.js", "Three.js", "WebGL",
-  "Expo", "Node.js", "Rust", "Kotlin", "Android", "C++", "Java", "FastAPI", "Qdrant", "Redis",
-  "DuckDB", "PostgreSQL", "Firebase", "Electron", "Docker", "FFmpeg", "OpenCV", "Google Gemini",
-  "Cloudflare R2", "Linux Mint", "Git",
-];
+const GITHUB_USER = new URL(DATA.contact.social.GitHub.url).pathname.slice(1);
 
-function SectionHead({
-  index,
-  label,
-  title,
-  dark = false,
-  aside,
-}: {
-  index: string;
-  label: string;
-  title: string;
-  dark?: boolean;
-  aside?: React.ReactNode;
-}) {
+const year = (s: string) => s.match(/\d{4}/)?.[0] ?? s;
+
+function A({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Reveal className="mb-12 sm:mb-16">
-      <div className={cn("mono-xs flex items-center justify-between border-t pt-2", dark ? "border-paper/40" : "border-ink")}>
-        <span className="flex items-center gap-3">
-          <span className={cn("px-1.5", dark ? "bg-lime text-[#16141f]" : "bg-ink text-paper")}>{index}</span>
-          <Decode text={label} />
-        </span>
-        {aside}
-      </div>
-      <h2 className="font-display mt-6 max-w-4xl text-balance text-[clamp(2.6rem,6.5vw,5.4rem)]">{title}</h2>
-    </Reveal>
+    <a href={href} target="_blank" rel="noopener noreferrer" className="link-under text-ink">
+      {children}
+    </a>
   );
 }
 
-export default function Page() {
-  const posts = getPosts();
-  const ranked = getRankedPosts();
-  const latest = posts[0];
-  const minutes = posts.reduce((n, p) => n + p.readingTime, 0);
-  const showcase = ranked.slice(0, 4).map(({ slug, accent, title, kicker, readingTime }) => ({
-    slug,
-    accent,
-    title,
-    kicker,
-    readingTime,
-  }));
-  const [lead, ...rest] = projects;
-  const leadPost = getPost(lead.post);
+export default async function Page() {
+  const posts = getRankedPosts();
+  const contributions = await getContributions(GITHUB_USER);
+  const featured = projects.slice(0, FEATURED);
+  const more = projects.slice(FEATURED);
+  const social = DATA.contact.social;
 
   return (
-    <>
-      {/* ---------------------------------------------------------- HERO */}
-      <section className="relative overflow-hidden border-b border-ink/10">
-        <PlotField />
-        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-10 pt-24 sm:px-8 sm:pt-28 lg:grid-cols-[1.2fr_0.8fr] lg:items-center lg:gap-14 lg:pb-14">
-          <div>
-            <Reveal className="flex flex-wrap items-center gap-2">
-              <Tag>Systems &amp; Robotics Engineer</Tag>
-              {latest && (
-                <Link
-                  href={`/blog/${latest.slug}`}
-                  className="mono-xs group inline-flex items-center gap-1.5 border border-ink/20 bg-paper/70 px-1.5 py-[1px] backdrop-blur hover:border-ink"
-                >
-                  <span className="bg-lime px-1 text-[#16141f]">new</span>
-                  <span className="max-w-[16rem] truncate">{latest.title.split(/[:—]/)[0]}</span>
-                  <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-              )}
-            </Reveal>
-
-            <h1 className="font-display mt-7 text-[clamp(3rem,7.2vw,6.6rem)]">
-              <RiseText text="I build software for machines that" start={80} />
-              <span className="rise-word">
-                <span style={{ ["--delay" as string]: "520ms" }}>
-                  <WordCycle words={["see.", "move.", "walk.", "remember."]} className="relative text-uv" />
-                </span>
-              </span>
-            </h1>
-
-            <Reveal delay={350}>
-              <p className="mt-7 max-w-xl text-lg leading-snug text-ink-soft sm:text-xl">
-                Humanoid simulation, 3D digital twins from phone video, air-gapped AI memory and zero-lag displays. I
-                write every project up from the code.
-              </p>
-            </Reveal>
-
-            <Reveal delay={450} className="mt-9 flex flex-wrap items-center gap-3">
-              <Link
-                href="#projects"
-                className="group inline-flex h-12 items-center gap-2 bg-ink px-5 font-semibold text-paper transition-colors hover:bg-uv hover:text-white"
-              >
-                See the work <ArrowDown className="size-4 transition-transform group-hover:translate-y-0.5" />
-              </Link>
-              <Link
-                href="/blog"
-                className="inline-flex h-12 items-center gap-2 border border-ink bg-paper/60 px-5 font-semibold backdrop-blur transition-colors hover:bg-lime hover:text-[#16141f]"
-              >
-                Field notes · {posts.length}
-              </Link>
-              <Link href="/resume" className="mono-xs link-under ml-1 text-ink-soft hover:text-ink">
-                resume.pdf
-              </Link>
-            </Reveal>
-
-            <Reveal delay={550}>
-              <DimLine className="mt-12 max-w-xl" label="Shubhr Gunjan · B.Tech ECE ’28 · Delhi NCR · 28.61°N 77.21°E" />
-            </Reveal>
-          </div>
-
-          <Reveal delay={250}>
-            <Showcase items={showcase} />
-          </Reveal>
-        </div>
-
-        <div className="relative border-t border-ink/10 bg-paper/70 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-8 md:flex-row md:items-center md:justify-between">
-            <Telemetry items={[{ k: "posts", v: String(posts.length) }, { k: "projects", v: String(projects.length) }]} />
-            <CalibrationStrip compact className="w-full md:w-64" />
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------------- LAB BENCH */}
-      <section className="relative overflow-hidden bg-lab text-desk-ink">
-        <HalftoneBlobs blobs={[{ x: "78%", y: "-25%", size: "520px", opacity: 0.35 }, { x: "-12%", y: "55%", size: "420px", opacity: 0.25 }]} />
-        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-8 sm:py-32">
-          <Reveal>
-            <p className="mono-xs mb-6">
-              <Decode text="// thesis" />
-            </p>
-            <h2 className="font-display max-w-5xl text-balance text-[clamp(2.8rem,8vw,7.5rem)]">
-              Most AI lives in a text box. I took the physical route.
-            </h2>
-          </Reveal>
-
-          <div className="mt-16 grid gap-10 md:grid-cols-3">
-            <Reveal delay={0}>
-              <RuleBlock label="Obey physics" index="01">
-                <span className="text-lg">
-                  A humanoid that must not fall, a room that must be walkable, a display that must not stutter. The
-                  hard part is always where software meets the world.
-                </span>
-              </RuleBlock>
-            </Reveal>
-            <Reveal delay={100}>
-              <RuleBlock label="Edge, not cloud" index="02">
-                <span className="text-lg">
-                  Clinics, labs and classrooms often can&apos;t send data out. Encrypted vector memory, local models
-                  and LAN-first sync are defaults, not features.
-                </span>
-              </RuleBlock>
-            </Reveal>
-            <Reveal delay={200}>
-              <RuleBlock label="Write it down" index="03">
-                <span className="text-lg">
-                  Every project gets an honest write-up: real code, measured numbers, and what&apos;s still
-                  scaffolding. Plus essays on The Artful Eye.
-                </span>
-              </RuleBlock>
-            </Reveal>
-          </div>
-
-          <div className="mt-20 grid grid-cols-1 border-l border-t border-current sm:grid-cols-3">
-            {[
-              { n: projects.length, label: "projects shipped, ranked best-first" },
-              { n: posts.length, label: "deep-dives written from the code" },
-              { n: minutes, label: "minutes of field notes to read" },
-            ].map((s, i) => (
-              <Reveal key={s.label} delay={i * 120} className="border-b border-r border-current p-5 sm:p-7">
-                <div className="font-display text-[clamp(4rem,9vw,7.5rem)] leading-none">
-                  <CountUp to={s.n} pad={2} />
-                </div>
-                <div className="mono-xs mt-4">{s.label}</div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------------- PROJECTS */}
-      <section id="projects" className="mx-auto max-w-7xl scroll-mt-16 px-4 py-24 sm:px-8 sm:py-32">
-        <SectionHead
-          index="01"
-          label="selected work"
-          title="Things I've built, best first."
-          aside={<span className="hidden sm:inline">{projects.length} entries · hover to speed up</span>}
-        />
-
-        {/* lead project */}
-        <Reveal>
-          <article
-            data-accent={lead.accent}
-            className="group/panel group relative grid border border-ink bg-paper transition-all duration-300 hover:-translate-y-1 hover:shadow-[8px_8px_0_0_var(--a)] lg:grid-cols-[1.35fr_1fr]"
-          >
-            <CornerMarks />
-            <Link href={`/blog/${lead.post}`} className="block aspect-[16/9] border-b border-ink lg:aspect-auto lg:border-b-0 lg:border-r">
-              <ProjectArt slug={lead.post} accent={lead.accent} />
-            </Link>
-            <div className="flex flex-col p-5 sm:p-8">
-              <div className="mono-xs flex justify-between text-muted-foreground">
-                <span>01 — {lead.dates}</span>
-                <span className="text-ink">★ featured</span>
-              </div>
-              <h3 className="font-display mt-6 text-[clamp(2rem,3.6vw,3.2rem)]">{lead.title}</h3>
-              <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{lead.description}</p>
-              <TechList items={lead.technologies} className="mt-6" />
-              <div className="mt-auto flex flex-wrap gap-2 pt-8">
-                {leadPost && (
-                  <Link href={`/blog/${leadPost.slug}`} className="inline-flex h-10 items-center gap-2 bg-ink px-4 text-sm font-semibold text-paper hover:bg-[var(--a)] hover:text-[#16141f]">
-                    Read the deep-dive · {leadPost.readingTime} min <ArrowRight className="size-4" />
-                  </Link>
-                )}
-              </div>
-            </div>
-          </article>
+    <div className="pt-32 sm:pt-40">
+      {/* ---------------------------------------------------------- INTRO */}
+      <section className="mx-auto max-w-[640px] px-6">
+        <Reveal className="flex items-center justify-between text-[13px] text-muted-foreground">
+          <span>
+            Delhi NCR, India <span className="mx-1.5 opacity-50">/</span> <LocalTime />
+          </span>
+          <span className="flex gap-4">
+            <a href={social.GitHub.url} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-ink">
+              GitHub
+            </a>
+            <a href={social.LinkedIn.url} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-ink">
+              LinkedIn
+            </a>
+          </span>
         </Reveal>
 
-        <div className="mt-8 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {rest.map((p, i) => {
-            const post = getPost(p.post);
-            return (
-              <Reveal key={p.title} delay={(i % 3) * 90} className="flex">
-                <article
-                  data-accent={p.accent}
-                  className="group/panel group relative flex w-full flex-col border border-ink bg-paper transition-all duration-300 hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--a)]"
-                >
-                  <CornerMarks />
-                  <Link href={post ? `/blog/${post.slug}` : p.href} className="block aspect-[16/9] border-b border-ink">
-                    <ProjectArt slug={p.post} accent={p.accent} />
-                  </Link>
-                  <div className="flex flex-1 flex-col p-4">
-                    <div className="mono-xs flex justify-between text-muted-foreground">
-                      <span>
-                        {String(i + 2).padStart(2, "0")} — {p.dates}
-                      </span>
-                      {post && <span>{post.readingTime} min read</span>}
-                    </div>
-                    <h3 className="font-display mt-3 text-[1.7rem] leading-[1.02]">{p.title}</h3>
-                    <p className="mt-3 line-clamp-4 text-sm leading-snug text-ink-soft">{p.description}</p>
-                    <TechList items={p.technologies} className="mt-4" />
-                    <div className="mt-auto flex flex-wrap gap-2 pt-5">
-                      {post && (
-                        <Link href={`/blog/${post.slug}`} className="mono-xs inline-flex items-center gap-1 bg-ink px-2 py-1.5 text-paper hover:bg-[var(--a)] hover:text-[#16141f]">
-                          deep-dive <ArrowRight className="size-3" />
-                        </Link>
-                      )}
-                      {p.links.map((l) => (
-                        <a
-                          key={l.href}
-                          href={l.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mono-xs inline-flex items-center gap-1 border border-ink px-2 py-1.5 hover:bg-[var(--a)] hover:text-[#16141f]"
-                        >
-                          {l.type.toLowerCase()} <ArrowUpRight className="size-3" />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                </article>
-              </Reveal>
-            );
-          })}
+        <Reveal delay={60} className="mt-12 flex items-center gap-3.5">
+          <img
+            src="/shubhr-mono.jpg"
+            alt="Portrait of Shubhr Gunjan"
+            width={48}
+            height={48}
+            className="size-12 rounded-full object-cover ring-1 ring-black/5"
+          />
+          <div className="leading-tight">
+            <div className="text-[15px] font-medium">{DATA.name}</div>
+            <div className="text-[14px] text-muted-foreground">Systems &amp; robotics engineer</div>
+          </div>
+        </Reveal>
+
+        <Reveal delay={120}>
+          <h1 className="mt-8 text-balance text-[clamp(2.4rem,7vw,3.5rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
+            I build software for machines that <span className="font-accent text-[1.08em] tracking-[-0.02em]">see and move.</span>
+          </h1>
+          <p className="mt-6 text-[17px] leading-[1.65] text-ink-soft">
+            Humanoid simulation, walkable 3D twins from phone video, air-gapped AI memory and displays that can&apos;t
+            afford to stutter. Every project gets an honest write-up from the code.
+          </p>
+        </Reveal>
+
+        <Reveal delay={180}>
+          <dl className="mt-8 grid grid-cols-[68px_1fr] gap-x-4 sm:grid-cols-[84px_1fr] gap-y-2.5 text-[15px] leading-snug">
+            <dt className="text-muted-foreground">Now</dt>
+            <dd className="text-ink-soft">
+              Building <A href="https://github.com/shubhrgunjan/vasimov">VASIMOV</A>, a MuJoCo twin of the Menlo Asimov 1 humanoid
+            </dd>
+            <dt className="text-muted-foreground">Before</dt>
+            <dd className="text-ink-soft">
+              <A href="https://github.com/shubhrgunjan/edgemed">EdgeMed</A> at Code Cubicle 6.0,{" "}
+              <A href="https://shubhrgunjan.github.io/nyaya-flow/">Nyaya Flow</A> as a Build in AI for India finalist
+            </dd>
+            <dt className="text-muted-foreground">Writing</dt>
+            <dd className="text-ink-soft">
+              <A href={social.Quora.url}>The Artful Eye</A>, essays on visual aesthetics and perception
+            </dd>
+            <dt className="text-muted-foreground">Studying</dt>
+            <dd className="text-ink-soft">B.Tech in Electronics &amp; Communication, class of ’28</dd>
+          </dl>
+        </Reveal>
+
+        <Reveal delay={240} className="mt-9 flex flex-wrap items-center gap-2">
+          <PillLink href={`mailto:${DATA.contact.email}`} external solid>
+            Send a message <ArrowUpRight className="size-3.5" />
+          </PillLink>
+          <PillLink href="/resume">Resume</PillLink>
+        </Reveal>
+
+        {contributions && (
+          <Reveal delay={300} className="mt-16 rounded-[var(--radius)] border border-border p-5 sm:p-6">
+            <ContributionGraph data={contributions} />
+          </Reveal>
+        )}
+      </section>
+
+      {/* ---------------------------------------------------------- WORK */}
+      <section className="mx-auto mt-32 max-w-5xl px-6">
+        <SectionTitle id="work" title="Selected work" aside={`${projects.length} projects`} />
+        <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2">
+          {featured.map((p, i) => (
+            <Reveal key={p.title} delay={(i % 2) * 80}>
+              <ProjectCard title={p.title} dates={p.dates} slug={p.post} accent={p.accent} href={`/blog/${p.post}`} />
+            </Reveal>
+          ))}
         </div>
+
+        <Reveal className="mt-16">
+          <h3 className="mb-2 text-[13px] text-muted-foreground">More projects</h3>
+          <div className="divide-y divide-border">
+            {more.map((p) => {
+              const [name, tagline] = splitTitle(p.title);
+              return (
+                <Row key={p.title} href={`/blog/${p.post}`} title={name} sub={tagline || p.description} meta={year(p.dates)} />
+              );
+            })}
+          </div>
+        </Reveal>
       </section>
 
       {/* ---------------------------------------------------------- EXPERIENCE */}
-      <section id="experience" className="scroll-mt-16 bg-ink py-24 text-paper sm:py-32">
-        <div className="mx-auto max-w-7xl px-4 sm:px-8">
-          <SectionHead index="02" label="experience" title="Where I've been building." dark />
-          <ol className="relative ml-2 border-l border-paper/30 sm:ml-[200px]">
-            {DATA.work.map((w, i) => (
-              <Reveal as="li" key={w.company} delay={i * 80} className="group relative pb-14 pl-8 last:pb-0">
-                <span aria-hidden className="absolute -left-[7px] top-1 size-3.5 border border-paper bg-ink transition-colors group-hover:bg-lime" />
-                <div className="mono-xs text-lime sm:absolute sm:-left-[200px] sm:top-1 sm:w-[170px] sm:text-right">
-                  {w.start} — {w.end}
-                </div>
-                <a href={w.href} target="_blank" rel="noopener noreferrer" className="mt-2 block sm:mt-0">
-                  <div className="font-display text-3xl leading-tight group-hover:underline sm:text-4xl">{w.title}</div>
-                  <div className="mt-2 flex items-center gap-1 text-sm text-paper/70">
-                    {w.company} <ArrowUpRight className="size-3.5" />
-                  </div>
+      <section className="mx-auto mt-32 max-w-[640px] px-6">
+        <SectionTitle id="experience" title="Experience" />
+        <ol className="divide-y divide-border">
+          {DATA.work.map((w, i) => (
+            <Reveal as="li" key={w.company} delay={i * 50} className="grid gap-1 py-6 first:pt-0 sm:grid-cols-[148px_1fr] sm:gap-6">
+              <div className="whitespace-nowrap text-[13px] text-muted-foreground sm:pt-0.5">
+                {w.start} — {w.end}
+              </div>
+              <div>
+                <a href={w.href} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-1">
+                  <span className="text-[15px] font-medium">{w.title}</span>
+                  <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </a>
-                <div className="mt-4 max-w-3xl text-[15px] leading-relaxed text-paper/75">
+                <div className="text-[14px] text-muted-foreground">{w.company}</div>
+                <div className="mt-3 text-[15px] leading-relaxed text-ink-soft">
                   <Markdown components={{ p: ({ children }) => <p>{children}</p> }}>{w.description}</Markdown>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {w.badges.map((b) => (
-                    <span key={b} className="mono-xs border border-paper/40 px-1.5 py-[1px]">
-                      {b}
-                    </span>
-                  ))}
-                </div>
-              </Reveal>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------------- STACK */}
-      <section className="overflow-hidden py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-4 sm:px-8">
-          <SectionHead index="03" label="toolchain" title="The stack behind it." />
-        </div>
-        {[STACK, [...STACK].reverse()].map((row, r) => (
-          <div key={r} className="group flex overflow-hidden border-b border-ink first:border-t" style={{ ["--duration" as string]: r ? "60s" : "48s" }}>
-            {[0, 1].map((dup) => (
-              <ul
-                key={dup}
-                aria-hidden={dup === 1}
-                className={`flex shrink-0 animate-marquee group-hover:[animation-play-state:paused] ${r ? "[animation-direction:reverse]" : ""}`}
-              >
-                {row.map((t) => (
-                  <li
-                    key={t}
-                    className="flex items-center gap-3 border-r border-ink px-7 py-5 font-display text-2xl transition-colors hover:bg-lime hover:text-[#16141f]"
-                  >
-                    <TechLogo name={t} className="size-6" />
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            ))}
-          </div>
-        ))}
-        <div className="mx-auto mt-14 grid max-w-7xl gap-10 px-4 sm:grid-cols-3 sm:px-8">
-          <RuleBlock label="Robotics & sim" index="A">MuJoCo, mjlab PPO, wire protocols, telemetry, Three.js twins.</RuleBlock>
-          <RuleBlock label="AI & data" index="B">Qdrant, DuckDB, local models, Gemini, Gaussian Splatting, VGGT.</RuleBlock>
-          <RuleBlock label="Product" index="C">React Native/Expo, Next.js, Electron, Android/Kotlin, Redis Streams, BLE.</RuleBlock>
-        </div>
+              </div>
+            </Reveal>
+          ))}
+        </ol>
       </section>
 
       {/* ---------------------------------------------------------- WRITING */}
-      <section className="border-y border-ink bg-chrome py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-4 sm:px-8">
-          <SectionHead
-            index="04"
-            label="field notes"
-            title="Written from the code up."
-            aside={
-              <Link href="/blog" className="link-under">
-                all {posts.length} posts →
-              </Link>
-            }
-          />
-          <div className="grid gap-8 md:grid-cols-3">
-            {ranked.slice(0, 3).map((p, i) => (
-              <Reveal key={p.slug} delay={i * 100} className="flex">
-                <PostCard post={p} index={i + 1} className="w-full" />
-              </Reveal>
-            ))}
-          </div>
-        </div>
+      <section className="mx-auto mt-28 max-w-[640px] px-6">
+        <SectionTitle
+          title="Writing"
+          aside={
+            <Link href="/blog" className="transition-colors hover:text-ink">
+              All {posts.length} posts →
+            </Link>
+          }
+        />
+        <Reveal className="divide-y divide-border">
+          {posts.slice(0, 5).map((p) => (
+            <PostRow key={p.slug} post={p} />
+          ))}
+        </Reveal>
+      </section>
+
+      {/* ---------------------------------------------------------- TOOLKIT */}
+      <section className="mx-auto mt-28 max-w-[640px] px-6">
+        <SectionTitle title="Toolkit" />
+        <Reveal>
+          <Toolkit />
+        </Reveal>
       </section>
 
       {/* ---------------------------------------------------------- RECOGNITION */}
-      <section className="mx-auto max-w-7xl px-4 py-24 sm:px-8 sm:py-32">
-        <SectionHead index="05" label="recognition" title="Hackathons, certificates, school." />
-        <div className="grid gap-8 lg:grid-cols-3">
-          {DATA.hackathons.map((h, i) => (
-            <Reveal key={h.title} delay={i * 100} className="flex">
-              <Window title={h.dates} className="w-full" bodyClassName="flex h-full flex-col">
-                {h.image && (
-                  <div className="aspect-[16/10] overflow-hidden border-b border-ink bg-chrome">
-                    <img src={h.image} alt={h.title} className="h-full w-full object-cover" loading="lazy" />
-                  </div>
-                )}
-                <div className="flex flex-1 flex-col p-4">
-                  <div className="mono-xs text-muted-foreground">{h.location}</div>
-                  <h3 className="font-display mt-2 text-2xl leading-tight">{h.title}</h3>
-                  <p className="mt-3 text-sm leading-snug text-ink-soft">{h.description}</p>
-                  <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                    {h.links.map((l) => (
-                      <a
-                        key={l.href}
-                        href={l.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mono-xs inline-flex items-center gap-1 border border-ink px-2 py-1.5 hover:bg-lime hover:text-[#16141f]"
-                      >
-                        {l.title} <ArrowUpRight className="size-3" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              </Window>
-            </Reveal>
+      <section className="mx-auto mt-28 max-w-[640px] px-6">
+        <SectionTitle title="Recognition" />
+        <Reveal className="divide-y divide-border">
+          {DATA.hackathons.map((h) => (
+            <Row key={h.title} href={h.links[0]?.href ?? "#"} external title={h.title} sub={h.location} meta={year(h.dates)} />
           ))}
-        </div>
+        </Reveal>
 
-        <div className="mt-16 grid border-t border-ink md:grid-cols-3">
+        <h3 className="mb-2 mt-12 text-[13px] text-muted-foreground">Education</h3>
+        <Reveal className="divide-y divide-border">
           {DATA.education.map((e) => (
-            <a
-              key={e.school}
-              href={e.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group border-b border-ink py-5 md:border-b-0 md:border-r md:px-5 md:first:pl-0 md:last:border-r-0"
-            >
-              <div className="mono-xs text-muted-foreground">
-                {e.start} — {e.end}
-              </div>
-              <div className="font-display mt-2 text-2xl leading-tight group-hover:underline">{e.school}</div>
-              <p className="mt-2 text-sm text-ink-soft">{e.degree}</p>
-            </a>
+            <Row key={e.school} href={e.href} external title={e.school} sub={e.degree} meta={e.end} />
           ))}
-        </div>
-
-        <div className="prose prose-os mt-20 max-w-3xl dark:prose-invert">
-          <h2 id="about">About</h2>
-          <Markdown>{DATA.summary}</Markdown>
-        </div>
+        </Reveal>
       </section>
-    </>
-  );
-}
 
-function TechList({ items, className }: { items: readonly string[]; className?: string }) {
-  return (
-    <ul className={cn("flex flex-wrap gap-1.5", className)}>
-      {items.map((t) => (
-        <li key={t} className="mono-xs inline-flex items-center gap-1 border border-ink/25 px-1.5 py-[2px]">
-          {techIcon(t) && <TechLogo name={t} className="size-3" />}
-          {t}
-        </li>
-      ))}
-    </ul>
+      {/* ---------------------------------------------------------- CONTACT */}
+      <section className="mx-auto mt-32 max-w-[640px] px-6">
+        <Reveal>
+          <p className="text-[1.6rem] leading-snug tracking-[-0.02em]">
+            <span className="font-accent text-[1.15em]">Building something that has to work in the real world?</span>{" "}
+            <span className="text-muted-foreground">I&apos;d like to hear about it.</span>
+          </p>
+          <div className="mt-6">
+            <PillLink href={`mailto:${DATA.contact.email}`} external solid>
+              {DATA.contact.email} <ArrowUpRight className="size-3.5" />
+            </PillLink>
+          </div>
+        </Reveal>
+      </section>
+    </div>
   );
 }

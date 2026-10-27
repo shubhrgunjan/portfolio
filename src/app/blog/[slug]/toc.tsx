@@ -20,8 +20,8 @@ export function ReadingProgress() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   return (
-    <div aria-hidden className="fixed inset-x-0 top-0 z-[60] h-1">
-      <div className="h-full origin-left bg-[var(--a)]" style={{ transform: `scaleX(${progress})` }} />
+    <div aria-hidden className="fixed inset-x-0 top-0 z-[60] h-[2px]">
+      <div className="h-full origin-left bg-ink" style={{ transform: `scaleX(${progress})` }} />
     </div>
   );
 }
@@ -45,20 +45,17 @@ export function Toc({ headings }: { headings: Heading[] }) {
   if (!headings.length) return null;
 
   return (
-    <nav aria-label="Table of contents" className="border border-ink bg-paper">
-      <div className="flex h-7 items-center justify-between border-b border-ink px-2">
-        <span className="mono-xs">Contents.toc</span>
-        <span aria-hidden className="mono-xs text-muted-foreground">§</span>
-      </div>
-      <ol className="max-h-[60vh] overflow-y-auto py-1">
+    <nav aria-label="Table of contents">
+      <div className="mb-3 text-[13px] text-muted-foreground">On this page</div>
+      <ol className="max-h-[65vh] space-y-0.5 overflow-y-auto border-l border-border">
         {headings.map((h) => (
           <li key={h.id}>
             <a
               href={`#${h.id}`}
               className={cn(
-                "block border-l-4 px-2 py-1 text-[13px] leading-snug transition-colors hover:bg-chrome",
-                h.depth === 3 && "pl-5 text-[12.5px] text-muted-foreground",
-                active === h.id ? "border-[var(--a)] bg-chrome font-semibold text-ink" : "border-transparent"
+                "-ml-px block border-l py-1 pl-3 text-[13px] leading-snug transition-colors duration-150",
+                h.depth === 3 && "pl-6",
+                active === h.id ? "border-ink text-ink" : "border-transparent text-muted-foreground hover:text-ink"
               )}
             >
               {h.text}

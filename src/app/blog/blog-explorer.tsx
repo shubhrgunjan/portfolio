@@ -6,15 +6,15 @@ import { useMemo, useState, type ReactNode } from "react";
 
 type Item = { slug: string; title: string; summary: string; tags: string[]; kicker?: string };
 
-/** Client-side search + tag filter over pre-rendered post cards. */
+/** Client-side search + tag filter over pre-rendered post rows. */
 export function BlogExplorer({
   items,
   tags,
-  cards,
+  rows,
 }: {
   items: Item[];
   tags: { tag: string; count: number }[];
-  cards: Record<string, ReactNode>;
+  rows: Record<string, ReactNode>;
 }) {
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState<string | null>(null);
@@ -28,65 +28,47 @@ export function BlogExplorer({
     );
   }, [items, query, tag]);
 
+  const chip = (on: boolean) =>
+    cn(
+      "press shrink-0 rounded-full px-3 py-1 text-[13px] transition-colors duration-150",
+      on ? "bg-ink text-paper" : "bg-chrome text-ink-soft hover:bg-chrome-2 hover:text-ink"
+    );
+
   return (
     <div>
-      <div className="sticky top-14 z-20 mb-10 border border-ink bg-paper">
-        <div className="flex h-7 items-center justify-between border-b border-ink px-2">
-          <span className="mono-xs">Finder.app</span>
-          <span className="mono-xs text-muted-foreground">
-            {visible.length}/{items.length} posts
-          </span>
-        </div>
-        <div className="flex flex-col gap-2 p-2 md:flex-row md:items-center">
-          <label className="flex flex-1 items-center gap-2 border border-ink bg-paper px-2">
-            <Search className="size-4 shrink-0" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="search robotics, qdrant, three.js…"
-              className="h-9 w-full bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </label>
-          <div className="scrollbar-none flex gap-1.5 overflow-x-auto md:max-w-[60%]">
-            <button
-              type="button"
-              onClick={() => setTag(null)}
-              className={cn(
-                "mono-xs shrink-0 border border-ink px-2 py-1.5",
-                !tag ? "bg-ink text-paper" : "hover:bg-lime hover:text-[#16141f]"
-              )}
-            >
-              all
-            </button>
-            {tags.map((t) => (
-              <button
-                key={t.tag}
-                type="button"
-                onClick={() => setTag(tag === t.tag ? null : t.tag)}
-                className={cn(
-                  "mono-xs shrink-0 border border-ink px-2 py-1.5",
-                  tag === t.tag ? "bg-ink text-paper" : "hover:bg-lime hover:text-[#16141f]"
-                )}
-              >
-                #{t.tag} <span className="opacity-60">{t.count}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      <label className="flex h-10 items-center gap-2 rounded-full bg-chrome px-4 transition-shadow focus-within:ring-1 focus-within:ring-ink/20">
+        <Search className="size-4 shrink-0 text-muted-foreground" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search posts"
+          aria-label="Search posts"
+          className="h-full w-full bg-transparent text-[14px] outline-none placeholder:text-muted-foreground"
+        />
+        <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
+          {visible.length}/{items.length}
+        </span>
+      </label>
+
+      <div className="scrollbar-none -mx-6 mt-3 flex gap-1.5 overflow-x-auto px-6">
+        <button type="button" onClick={() => setTag(null)} className={chip(!tag)}>
+          All
+        </button>
+        {tags.map((t) => (
+          <button key={t.tag} type="button" onClick={() => setTag(tag === t.tag ? null : t.tag)} className={chip(tag === t.tag)}>
+            {t.tag}
+          </button>
+        ))}
       </div>
 
       {visible.length ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 divide-y divide-border">
           {visible.map((p) => (
-            <div key={p.slug} className="flex">
-              {cards[p.slug]}
-            </div>
+            <div key={p.slug}>{rows[p.slug]}</div>
           ))}
         </div>
       ) : (
-        <div className="border border-dashed border-ink p-12 text-center font-mono text-sm">
-          No posts match. Try another query.
-        </div>
+        <p className="mt-12 text-center text-[14px] text-muted-foreground">No posts match that. Try another word.</p>
       )}
     </div>
   );

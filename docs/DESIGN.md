@@ -1,62 +1,60 @@
-# SG//OS — "Calibration" design system
+# Mono — design system
 
-Shubhr builds software that perceives and moves through the physical world. The interface borrows the visual
-language of that work: **camera-calibration targets** (checkerboards, ArUco fiducials, colour charts),
-**engineering drawings** (dimension lines, registration crosshairs, coordinate labels) and **telemetry**
-(live readouts, plotted trajectories). Halftone dithering is the texture that ties it together.
+Black, white and greys only. Hierarchy comes from size, weight and spacing; colour never carries meaning.
+The site should feel like a well-set page: one calm reading column, generous whitespace, quiet chrome.
 
-The site is light-first, with a matching dark mode. Everything is vector; nothing ships as a screenshot.
+References (principles, not pixels): lookap entries *Minimal Portfolio Refresh* (floating dark pill nav,
+greyscale portrait, muted project grid) and *Minimal Portfolio With AI Imagery* (single 600px column,
+near-white page, tidy type scale).
+
+Dark is the default theme for new visitors; the toggle in the nav remembers a visitor's choice.
 
 ## Tokens (`src/app/globals.css`)
 
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `paper` | `#FAFAF7` | `#0E0D14` | page background |
-| `ink` | `#16141F` | `#F3F1FA` | text, strokes, borders |
-| `ink-soft` | `#4A4658` | `#B9B4C9` | body copy |
-| `lab` | `#D4F26A` | `#16132A` | "lab bench" sections (lime / deep violet) |
-| `uv` (ultraviolet) | `#6B4EFF` | `#9C86FF` | primary action, links, focus |
-| accents | `pink #FF5FA2` `sky #4FB3FF` `lime #C6F24E` `violet #8B6CFF` `orange #FF8A3D` `mint #2ED3A0` | slightly lifted | one per project/post, via `data-accent` → `var(--a)` |
+| `paper` | `#FDFDFD` | `#0C0C0C` | page background |
+| `ink` | `#141414` | `#EDEDED` | headings, primary text, solid buttons |
+| `ink-soft` | `#5C5C5C` | `#A3A3A3` | body copy |
+| `muted-foreground` | `#8A8A8A` | `#737373` | meta, labels, secondary lines |
+| `chrome` | `#F4F4F4` | `#161616` | cards, plates, inputs, code |
+| `chrome-2` | `#EBEBEB` | `#1F1F1F` | hover / pressed surfaces |
+| `border` | `#E6E6E6` | `#242424` | hairline dividers |
 
-**Typography:** Bricolage Grotesque (display, 600–800, tight tracking), Geist (body), Geist Mono (labels,
-readouts; never smaller than 12px).
+The old accent names (`pink`, `sky`, `lime`…) are kept as a light grey ramp so the project illustrations and
+any older component render in greyscale without being forked. Radius is `14px` for plates, `8px` for inner
+frames, full for pills.
 
-## Motifs (`src/components/os/`)
+**Type:** Geist for everything (600 for headings, `-0.035em` tracking), Geist Mono only for code and step
+numbers, Instrument Serif *italic* for one accent phrase per view at most.
 
-- **Panel** (`Window`): 1px ink frame, header with a deterministic ArUco glyph seeded by its title and a
-  coordinate readout; registration crosshairs sit just outside the corners and spread on hover.
-- **Calibration strip**: the six accents as a labelled swatch bar. It's the brand mark.
-- **Checker / ArUco**: decorative fiducials, generated, never images.
-- **Dimension line**: `|←— 1440 —→|` annotations on headlines and figures.
-- **Telemetry HUD**: real live values (cursor position, scroll, clock, post count). No fake data and no
-  decorative gibberish.
+| Role | Size |
+| --- | --- |
+| Page title | 40px / 1.1 |
+| Lede | 21–22px, muted, with an optional serif-italic phrase in ink |
+| Section title | 17px semibold |
+| Body | 16px / 1.7 |
+| Rows, meta | 15px title, 13–14px muted |
+
+## Layout
+
+- Text sections sit in a 640px column; the work grid widens to 1024px.
+- **Nav:** a floating `#161616` pill, fixed top-centre in both themes, with a spring-sliding highlight and a
+  lighter inset Contact button. A paper-to-transparent fade sits under it so content never collides with it.
+- **Work:** label row (name in ink, tagline in grey, date right) above a `chrome` plate; the illustration is
+  framed inside it with a soft shadow, like a print on a mount. Remaining projects are list rows.
+- **Toolkit:** monochrome brand glyphs (`simple-icons`, drawn in `currentColor`) on 40px `chrome` tiles,
+  grouped by area; the name shows in a tooltip on hover or focus. Wordmark-only logos are left out.
+- **Contribution graph:** last year of public GitHub activity on the same `--g0…--g4` grey ramp.
+- **Rows:** title + one-line muted summary, meta on the right, an ↗ that appears on hover, grey hover fill.
 
 ## Motion
 
-| Name | What | Spec |
-| --- | --- | --- |
-| Settle | blocks enter | 12px rise and fade, 700ms `cubic-bezier(.2,.7,.1,1)`, 60ms stagger |
-| Plot | lines draw in | `stroke-dashoffset` 1 → 0 on `pathLength=1`, 1.2–2s |
-| Decode | mono labels resolve from scrambled glyphs | 400–700ms |
-| Ambient | loops inside project art | 4–12s, paused when off-screen |
+From lookap's presets: enter is fade-up 12px (520ms, `cubic-bezier(.2,.8,.2,1)`, staggered 50–80ms), hover
+changes colour or surface only (150ms), press scales to 0.98 (120ms). Project illustrations keep their
+ambient loops and pause off-screen. Everything collapses to its end state under `prefers-reduced-motion`.
 
-Everything respects `prefers-reduced-motion` (all of the above collapse to their end state).
+## Not yet migrated
 
-## Project art (`src/components/art/`)
-
-One animated SVG illustration per project, `viewBox="0 0 400 225"` (16:9):
-accent background, ink strokes (`1.5`), paper fills, halftone or hatch shading, one mono annotation
-(`fig. 01 — …`). Animations use the shared classes in `globals.css` (`art-draw`, `art-float`, `art-dash`,
-`art-blink`, `art-orbit`, `art-path`).
-
-## Fixes over the reference (typesafe.ai)
-
-1. **Fragmented nav**: floating, ungrouped boxes over the hero. → One docked bar with a sliding active
-   indicator and a scroll-progress hairline.
-2. **Hero headline takes 6 lines and pushes the CTA below the fold** (plus a cookie banner over it). → Balanced
-   3-line headline, CTA visible at 1440×900, nothing covering content.
-3. **Decorative base64 noise.** → Replaced with live, meaningful telemetry.
-4. **11px low-contrast mono on pink.** → 12px minimum, contrast-checked pairs only.
-5. **One flat colour for every section.** → Per-project accents and alternating paper/lab/ink sections.
-6. **Heavy black drop shadows on everything.** → Flat by default; offset accent shadow only on interaction.
-7. **No visible focus states or reduced-motion handling.** → UV focus rings, reduced-motion support everywhere.
+`/design` (the SG//OS style guide) and `/write` still use the old components; they render in greyscale through
+the tokens but keep square frames. The OG images still use the old palette.

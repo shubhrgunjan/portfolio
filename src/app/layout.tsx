@@ -1,12 +1,12 @@
 import { SITE_URL } from "@/lib/site";
-import { SiteFooter } from "@/components/os/site-footer";
-import { SiteHeader } from "@/components/os/site-header";
+import { SiteFooter } from "@/components/mono/site-footer";
+import { SiteNav } from "@/components/mono/site-nav";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DATA } from "@/data/resume";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const body = Geist({
@@ -14,10 +14,12 @@ const body = Geist({
   variable: "--font-body",
 });
 
-const display = Bricolage_Grotesque({
+// One serif, italic only, for the occasional accent phrase.
+const serif = Instrument_Serif({
   subsets: ["latin"],
-  axes: ["wdth", "opsz"],
-  variable: "--font-display-face",
+  weight: "400",
+  style: "italic",
+  variable: "--font-serif-face",
 });
 
 const mono = Geist_Mono({
@@ -71,13 +73,13 @@ export default function RootLayout({
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
           body.variable,
-          display.variable,
+          serif.variable,
           mono.variable
         )}
       >
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <TooltipProvider delayDuration={0}>
-            <SiteHeader email={DATA.contact.email} />
+            <SiteNav email={DATA.contact.email} />
             <main className="relative min-h-dvh">{children}</main>
             <SiteFooter />
           </TooltipProvider>
