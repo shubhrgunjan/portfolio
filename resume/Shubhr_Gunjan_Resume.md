@@ -5,7 +5,7 @@
 
 ## 🎓 Education
 
-* **Bachelor of Technology (B.Tech) in Electronics & Communication Engineering** (2024 – 2028)
+* **Bachelor of Technology (B.Tech) in Electronics & Communication Engineering** (2026 – 2030)
   * *Coursework:* Digital Signal Processing, Embedded Systems, Microprocessors, Data Structures & Algorithms, Computer Architecture.
 * **University of Helsinki (MOOC.fi)** — *Certified with Distinction* (2026)
   * Java Programming I & II (Advanced OOP, Stream APIs, Algorithmic Complexity, Recursive Architectures).
