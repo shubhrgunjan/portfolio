@@ -4,7 +4,7 @@ Black, white and greys only. Hierarchy comes from size, weight and spacing; colo
 The site should feel like a well-set page: one calm reading column, generous whitespace, quiet chrome.
 
 References (principles, not pixels): lookap entries *Minimal Portfolio Refresh* (floating dark pill nav,
-greyscale portrait, muted project grid) and *Minimal Portfolio With AI Imagery* (single 600px column,
+muted project grid) and *Minimal Portfolio With AI Imagery* (single 600px column,
 near-white page, tidy type scale).
 
 Dark is the default theme for new visitors; the toggle in the nav remembers a visitor's choice.
@@ -52,7 +52,8 @@ numbers, Instrument Serif *italic* for one accent phrase per view at most.
 
 From lookap's presets: enter is fade-up 12px (520ms, `cubic-bezier(.2,.8,.2,1)`, staggered 50–80ms), hover
 changes colour or surface only (150ms), press scales to 0.98 (120ms). Project illustrations keep their
-ambient loops and pause off-screen. Everything collapses to its end state under `prefers-reduced-motion`.
+ambient loops and pause off-screen. Under `prefers-reduced-motion` (which many desktops report by default) reveals become a plain fade and the
+illustrations keep drawing and blinking; only spin, sway and path travel stop.
 
 ## Not yet migrated
 

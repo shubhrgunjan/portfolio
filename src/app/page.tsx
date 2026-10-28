@@ -1,7 +1,5 @@
-/* eslint-disable @next/next/no-img-element */
 import { PillLink, PostRow, ProjectCard, Row, SectionTitle, splitTitle } from "@/components/mono/blocks";
 import { ContributionGraph } from "@/components/mono/contribution-graph";
-import { LocalTime } from "@/components/mono/local-time";
 import { Toolkit } from "@/components/mono/toolkit";
 import { Reveal } from "@/components/os/motion";
 import { DATA } from "@/data/resume";
@@ -37,11 +35,12 @@ export default async function Page() {
     <div className="pt-32 sm:pt-40">
       {/* ---------------------------------------------------------- INTRO */}
       <section className="mx-auto max-w-[640px] px-6">
-        <Reveal className="flex items-center justify-between text-[13px] text-muted-foreground">
-          <span>
-            Delhi NCR, India <span className="mx-1.5 opacity-50">/</span> <LocalTime />
-          </span>
-          <span className="flex gap-4">
+        <Reveal className="flex items-end justify-between gap-4">
+          <div className="leading-tight">
+            <div className="text-[15px] font-medium">{DATA.name}</div>
+            <div className="text-[14px] text-muted-foreground">Systems &amp; robotics engineer</div>
+          </div>
+          <span className="flex gap-4 text-[13px] text-muted-foreground">
             <a href={social.GitHub.url} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-ink">
               GitHub
             </a>
@@ -49,20 +48,6 @@ export default async function Page() {
               LinkedIn
             </a>
           </span>
-        </Reveal>
-
-        <Reveal delay={60} className="mt-12 flex items-center gap-3.5">
-          <img
-            src="/shubhr-mono.jpg"
-            alt="Portrait of Shubhr Gunjan"
-            width={48}
-            height={48}
-            className="size-12 rounded-full object-cover ring-1 ring-black/5"
-          />
-          <div className="leading-tight">
-            <div className="text-[15px] font-medium">{DATA.name}</div>
-            <div className="text-[14px] text-muted-foreground">Systems &amp; robotics engineer</div>
-          </div>
         </Reveal>
 
         <Reveal delay={120}>

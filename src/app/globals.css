@@ -502,15 +502,12 @@
 }
 @keyframes art-sway { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
 
+/* Reduced motion tones movement down rather than switching it off: many desktops (Cinnamon with effects off,
+   Windows with "animation effects" off) report it by default. Fades and line drawing stay; travel and spin stop. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
-    scroll-behavior: auto !important;
-  }
-  .reveal { opacity: 1; transform: none; }
+  html { scroll-behavior: auto !important; }
+  .reveal { transform: none; }
   .press:active { transform: none; }
-  .art .art-draw, .art .art-draw-loop { stroke-dashoffset: 0; animation: none; }
+  .art .art-spin, .art .art-path, .art .art-sway { animation: none; }
   .rise-word > span { transform: none; animation: none; }
 }
