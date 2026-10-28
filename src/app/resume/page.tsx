@@ -82,7 +82,7 @@ export default function ResumePage() {
                 <span className="font-semibold text-sm sm:text-base">
                   Bachelor of Technology (B.Tech) in Electronics & Communication Engineering
                 </span>
-                <span className="text-xs font-mono text-muted-foreground shrink-0">2024 – 2028</span>
+                <span className="text-xs font-mono text-muted-foreground shrink-0">2026 – 2030</span>
               </div>
               <div className="flex justify-between items-baseline text-xs text-muted-foreground">
                 <span>Relevant Coursework: DSP, Embedded Systems, Microprocessors, DSA, Computer Architecture</span>

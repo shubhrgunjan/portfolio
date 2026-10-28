@@ -76,7 +76,7 @@ export default async function Page() {
               <A href={social.Quora.url}>The Artful Eye</A>, essays on visual aesthetics and perception
             </dd>
             <dt className="text-muted-foreground">Studying</dt>
-            <dd className="text-ink-soft">B.Tech in Electronics &amp; Communication, class of ’28</dd>
+            <dd className="text-ink-soft">B.Tech in Electronics &amp; Communication, class of ’30</dd>
           </dl>
         </Reveal>
 

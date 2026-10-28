@@ -131,10 +131,10 @@ export const DATA = {
     {
       school: "Electronics & Communication Engineering",
       href: "https://github.com/shubhrgunjan",
-      degree: "Bachelor of Technology (B.Tech) in ECE (2024 - 2028)",
+      degree: "Bachelor of Technology (B.Tech) in ECE (2026 - 2030)",
       logoUrl: "",
-      start: "2024",
-      end: "2028",
+      start: "2026",
+      end: "2030",
     },
     {
       school: "University of Helsinki (MOOC.fi)",

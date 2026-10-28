@@ -10,6 +10,8 @@ const GAP = 3;
 const STEP = CELL + GAP;
 const LEFT = 26; // room for weekday labels
 const TOP = 16; // room for month labels
+const NARROW = 440; // below this width only the most recent half year is drawn, so cells stay legible
+const NARROW_WEEKS = 26;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const parse = (d: string) => new Date(`${d}T00:00:00Z`);
@@ -18,10 +20,19 @@ const label = (d: string) =>
 
 /** GitHub-style contribution calendar drawn in the site's grey ramp. */
 export function ContributionGraph({ data }: { data: Contributions }) {
-  const { days, user } = data;
+  const { user } = data;
   const [hover, setHover] = useState<number | null>(null);
   const [shown, setShown] = useState(false);
+  const [narrow, setNarrow] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setNarrow(e.contentRect.width < NARROW));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -33,6 +44,11 @@ export function ContributionGraph({ data }: { data: Contributions }) {
     return () => io.disconnect();
   }, []);
 
+  // On narrow screens keep whole weeks ending today, so the newest activity is always in view.
+  const days = narrow
+    ? data.days.slice(-(NARROW_WEEKS * 7 - 6 + parse(data.days[data.days.length - 1].date).getUTCDay()))
+    : data.days;
+  const total = narrow ? days.reduce((n, d) => n + d.count, 0) : data.total;
   const offset = parse(days[0].date).getUTCDay(); // calendar columns start on Sunday
   const weeks = Math.ceil((days.length + offset) / 7);
   const width = LEFT + weeks * STEP - GAP;
@@ -54,8 +70,8 @@ export function ContributionGraph({ data }: { data: Contributions }) {
     <div ref={ref}>
       <div className="mb-3 flex items-baseline justify-between gap-4 text-[13px]">
         <span className="text-ink">
-          <span className="font-medium tabular-nums">{data.total.toLocaleString("en-US")}</span>{" "}
-          <span className="text-muted-foreground">contributions in the last year</span>
+          <span className="font-medium tabular-nums">{total.toLocaleString("en-US")}</span>{" "}
+          <span className="text-muted-foreground">{narrow ? "contributions in 6 months" : "contributions in the last year"}</span>
         </span>
         <a
           href={`https://github.com/${user}`}
@@ -67,14 +83,11 @@ export function ContributionGraph({ data }: { data: Contributions }) {
         </a>
       </div>
 
-      {/* rtl scroller opens at the newest weeks on narrow screens */}
-      <div dir="rtl" className="scrollbar-none -mx-1 overflow-x-auto px-1">
-        <div dir="ltr">
           <svg
             viewBox={`0 0 ${width} ${height}`}
-            className="block h-auto w-full min-w-[500px]"
+            className="block h-auto w-full"
             role="img"
-            aria-label={`${data.total} GitHub contributions in the last year`}
+            aria-label={`${total} GitHub contributions in the last ${narrow ? "6 months" : "year"}`}
             onMouseLeave={() => setHover(null)}
           >
             {months.map((m) => (
@@ -111,8 +124,6 @@ export function ContributionGraph({ data }: { data: Contributions }) {
               );
             })}
           </svg>
-        </div>
-      </div>
 
       <div className="mt-3 flex items-center justify-between gap-4 text-[12px] text-muted-foreground">
         <span className="min-h-[1lh] tabular-nums">
