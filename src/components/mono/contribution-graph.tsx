@@ -77,7 +77,7 @@ export function ContributionGraph({ data }: { data: Contributions }) {
           href={`https://github.com/${user}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex shrink-0 items-center gap-0.5 text-muted-foreground transition-colors hover:text-ink"
+          className="hidden shrink-0 items-center gap-0.5 text-muted-foreground transition-colors hover:text-ink sm:inline-flex"
         >
           @{user} <ArrowUpRight className="size-3" />
         </a>

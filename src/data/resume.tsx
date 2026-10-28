@@ -19,7 +19,7 @@ export const DATA = {
   description:
     "Software engineer building edge AI, real-time systems and tools that solve real frictions. B.Tech ECE student and writer of The Artful Eye on Quora.",
   summary:
-    "I build software that has to hold up in the real world: an air-gapped clinical memory vault ([EdgeMed](https://github.com/shubhrgunjan/edgemed)), a voice-first legal guide for India ([Nyaya Flow](https://shubhrgunjan.github.io/nyaya-flow/), a *Build in AI for India* finalist) and zero-lag display sync for classroom boards. Outside code I curate *The Artful Eye* on [Quora](https://www.quora.com/profile/Shubhr-Gunjan), writing about visual aesthetics and perception.",
+    "I'm a B.Tech ECE student who ships: an air-gapped clinical memory vault ([EdgeMed](https://github.com/shubhrgunjan/edgemed)), a voice-first legal guide for India ([Nyaya Flow](https://shubhrgunjan.github.io/nyaya-flow/), a *Build in AI for India* finalist) and zero-lag display sync for classroom boards. Outside code I curate *The Artful Eye* on [Quora](https://www.quora.com/profile/Shubhr-Gunjan), writing about visual aesthetics and perception.",
   avatarUrl: "/headshot.jpg",
   skills: [
     { name: "Python", icon: Python },

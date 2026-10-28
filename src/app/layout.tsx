@@ -1,6 +1,6 @@
 import { SITE_URL } from "@/lib/site";
 import { FlickeringGrid } from "@/components/magicui/flickering-grid";
-import { SiteFooter } from "@/components/mono/site-footer";
+import { SiteFooter } from "@/components/site-footer";
 import Navbar from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";

@@ -1,91 +1,90 @@
 /* eslint-disable @next/next/no-img-element */
 import BlurFade from "@/components/magicui/blur-fade";
-import BlurFadeText from "@/components/magicui/blur-fade-text";
 import { shortDate } from "@/components/mono/blocks";
+import { ContributionGraph } from "@/components/mono/contribution-graph";
 import { ProjectCard } from "@/components/project-card";
 import { MoreLink, SectionHeader } from "@/components/section/section-header";
 import WorkSection from "@/components/section/work-section";
 import { Avatar } from "@/components/ui/avatar";
 import { DATA } from "@/data/resume";
+import { getContributions } from "@/lib/github";
 import { getRankedPosts } from "@/lib/posts";
-import { ArrowUpRight, ChevronRight, Download, FileText, MapPin } from "lucide-react";
+import { ArrowUpRight, ChevronRight, FileText, MapPin } from "lucide-react";
 import Link from "next/link";
 import Markdown from "react-markdown";
 
-const BLUR_FADE_DELAY = 0.04;
+const BLUR_FADE_DELAY = 0.05;
 const FEATURED = 4;
 const projects = [...DATA.projects].sort((a, b) => a.rank - b.rank);
+const GITHUB_USER = new URL(DATA.contact.social.GitHub.url).pathname.slice(1);
 
-export default function Page() {
+export default async function Page() {
   const posts = getRankedPosts();
+  const contributions = await getContributions(GITHUB_USER);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-20 px-6 pt-16 sm:pt-24">
-      <section id="hero" className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-        <div className="order-2 flex flex-1 flex-col gap-3 md:order-1">
-          <BlurFade delay={BLUR_FADE_DELAY}>
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-xs">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-signal opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-signal" />
-              </span>
-              Edge AI • Real-time systems • Developer tools
-            </div>
-          </BlurFade>
-          <BlurFadeText
-            delay={BLUR_FADE_DELAY * 2}
-            className="font-heading text-4xl font-bold tracking-tight sm:text-5xl"
-            yOffset={8}
-            text={`Hi, I'm ${DATA.name.split(" ")[0]}`}
-          />
-          <BlurFade delay={BLUR_FADE_DELAY * 3}>
-            <p className="max-w-[560px] leading-relaxed text-muted-foreground md:text-lg">{DATA.description}</p>
-          </BlurFade>
-          <BlurFade delay={BLUR_FADE_DELAY * 4}>
-            <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
-              <MapPin className="size-3.5 shrink-0 text-brand" />
-              {DATA.location}
-            </div>
-          </BlurFade>
-          <BlurFade delay={BLUR_FADE_DELAY * 5}>
-            <div className="flex flex-wrap items-center gap-2.5 pt-1">
-              <Link
-                href="/resume"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-medium text-brand-fg shadow-[0_6px_20px_-6px] shadow-brand/60 transition-all hover:brightness-110"
-              >
-                <FileText className="size-4" />
-                View resume
-              </Link>
-              <a
-                href="/Shubhr_Gunjan_Resume.pdf"
-                download
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
-              >
-                <Download className="size-4" />
-                Download PDF
-              </a>
-            </div>
-          </BlurFade>
-        </div>
-        <BlurFade delay={BLUR_FADE_DELAY} className="order-1 shrink-0 md:order-2">
-          <div className="group relative">
-            <div className="absolute -inset-1 rounded-full bg-linear-to-tr from-brand via-sky-400 to-emerald-400 opacity-50 blur-md transition duration-500 group-hover:opacity-80" />
-            <Avatar className="relative size-28 rounded-full border-2 border-background ring-2 ring-brand/40 md:size-36">
+      <section id="hero">
+        <BlurFade delay={BLUR_FADE_DELAY}>
+          <div className="flex items-center gap-4">
+            <Avatar className="size-14 rounded-full ring-1 ring-border ring-offset-2 ring-offset-background">
               <img alt={`Headshot of ${DATA.name}`} src={DATA.avatarUrl} className="size-full rounded-full object-cover" />
             </Avatar>
+            <div className="leading-tight">
+              <div className="font-medium">{DATA.name}</div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <MapPin className="size-3.5" /> {DATA.location}
+              </div>
+            </div>
           </div>
         </BlurFade>
-      </section>
-
-      <section id="about" className="-mt-6 flex flex-col gap-4">
-        <BlurFade delay={BLUR_FADE_DELAY * 6}>
-          <h2 className="text-xl font-bold">About</h2>
+        <BlurFade delay={BLUR_FADE_DELAY * 2}>
+          <h1 className="mt-10 text-balance text-[2.5rem] font-semibold leading-[1.04] tracking-[-0.035em] sm:text-[3.4rem]">
+            Software for edge AI and real-time systems,{" "}
+            <span className="text-muted-foreground">built to hold up in the real world.</span>
+          </h1>
         </BlurFade>
-        <BlurFade delay={BLUR_FADE_DELAY * 7}>
-          <div className="prose max-w-full text-pretty leading-relaxed text-muted-foreground dark:prose-invert prose-a:text-brand prose-a:no-underline hover:prose-a:underline">
+        <BlurFade delay={BLUR_FADE_DELAY * 3}>
+          <div className="prose mt-6 max-w-none text-pretty text-[17px] leading-relaxed text-muted-foreground dark:prose-invert prose-p:my-0 prose-a:font-medium prose-a:text-foreground prose-a:underline-offset-4 prose-a:decoration-border hover:prose-a:decoration-foreground">
             <Markdown>{DATA.summary}</Markdown>
           </div>
         </BlurFade>
+        <BlurFade delay={BLUR_FADE_DELAY * 4}>
+          <div className="mt-8 flex flex-wrap items-center gap-2">
+            <a
+              href={`mailto:${DATA.contact.email}`}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand px-5 text-sm font-medium text-brand-fg transition-opacity hover:opacity-85"
+            >
+              Get in touch <ArrowUpRight className="size-4" />
+            </a>
+            <Link
+              href="/resume"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-card px-5 text-sm font-medium transition-colors hover:bg-brand-soft"
+            >
+              <FileText className="size-4" /> Resume
+            </Link>
+            <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+            {[DATA.contact.social.GitHub, DATA.contact.social.LinkedIn].map((s) => (
+              <a
+                key={s.name}
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.name}
+                className="hidden size-10 place-items-center rounded-full border border-border bg-card text-muted-foreground sm:grid transition-colors hover:bg-brand-soft hover:text-foreground"
+              >
+                <s.icon className="size-4" />
+              </a>
+            ))}
+          </div>
+        </BlurFade>
+        {contributions && (
+          <BlurFade delay={BLUR_FADE_DELAY * 5}>
+            <div className="mt-14 rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <ContributionGraph data={contributions} />
+            </div>
+          </BlurFade>
+        )}
       </section>
 
       <section id="work" className="flex flex-col gap-6">
@@ -155,32 +154,6 @@ export default function Page() {
         </BlurFade>
       </section>
 
-      <section id="contact">
-        <BlurFade inView>
-          <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-12 text-center">
-            <div className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-48 w-2/3 rounded-full bg-brand/20 blur-3xl" />
-            <div className="relative flex flex-col items-center gap-4">
-              <span className="rounded-full border border-brand/30 bg-brand-soft px-3.5 py-1 text-[13px] font-medium text-brand">
-                Contact
-              </span>
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Get in touch</h2>
-              <p className="max-w-md text-balance text-muted-foreground">
-                Building something that has to work in the real world? Send me a message, or find me on{" "}
-                <a href={DATA.contact.social.LinkedIn.url} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
-                  LinkedIn
-                </a>
-                .
-              </p>
-              <a
-                href={`mailto:${DATA.contact.email}`}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-fg shadow-[0_6px_20px_-6px] shadow-brand/60 transition-all hover:brightness-110"
-              >
-                {DATA.contact.email} <ArrowUpRight className="size-4" />
-              </a>
-            </div>
-          </div>
-        </BlurFade>
-      </section>
     </div>
   );
 }

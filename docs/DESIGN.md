@@ -7,17 +7,17 @@ The site is built on the **Magic UI portfolio template** (the one the portfolio 
 
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `background` | `#FBFBFD` | `#0A0B10` | page |
-| `card` | `#FFFFFF` | `#10121A` | cards, dock, contact panel |
-| `foreground` | `#12131A` | `#ECEEF4` | text |
-| `muted-foreground` | `#6B6F80` | `#8A8FA3` | secondary text |
-| `border` | `#E3E5EC` | `#20232D` | hairlines |
-| `brand` | `#6D4FE0` | `#A593FF` | links, primary buttons, pills, focus, selection, graph |
+| `background` | `#F5F5F4` | `#151515` | page |
+| `card` | `#FFFFFF` | `#1A1A1A` | cards, dock, contact panel |
+| `foreground` | `#171717` | `#EDEDED` | text |
+| `muted-foreground` | `#737373` | `#8C8C8C` | secondary text |
+| `border` | `#E2E2E1` | `#2A2A2A` | hairlines |
+| `brand` | `#262626` | `#E8E8E8` | primary buttons, pills, focus, selection (ink, not a hue) |
 | `brand-soft` | brand at 10–12% | | pill and hover fills |
-| `brand-fg` | `#FFFFFF` | `#0A0B10` | text on a brand button |
+| `brand-fg` | `#FAFAFA` | `#151515` | text on a brand button |
 
-Project illustrations sit on pastel plates (`pink`, `sky`, `violet`, `lime`, `orange`, `mint`, `magenta`), slightly
-dimmed in dark mode. The GitHub graph ramps `--g0…--g4` through the brand hue.
+Greys only. Project illustrations sit on barely-tinted plates (`pink`, `sky`, `violet`… now near-greys),
+dimmed in dark mode. The GitHub graph uses the grey ramp `--g0…--g4`.
 
 ## Type
 
@@ -28,7 +28,8 @@ dimmed in dark mode. The GitHub graph ramps `--g0…--g4` through the brand hue.
 
 ## Structure
 
-- **Home is short:** hero with headshot, about, experience, 4 featured projects, 3 latest posts, contact.
+- **Home is short:** hero (headshot byline, two-tone headline, intro, actions, GitHub graph), experience,
+  4 featured projects and 3 latest posts. Contact lives in the footer on every page.
   Every section ends with a link to the page that holds the rest (`/projects`, `/blog`, `/resume`).
 - **`/projects`:** every project card, the GitHub contribution graph and the hackathon timeline.
 - **Dock:** pages, then socials (hidden under `sm`, where they live in the footer), then the theme switch.
