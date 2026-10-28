@@ -6,12 +6,12 @@ import { Badge } from "@/components/ui/badge";
 export const metadata: Metadata = {
   title: "Resume | Shubhr Gunjan",
   description:
-    "Curriculum Vitae of Shubhr Gunjan — Systems & Robotics Software Engineer, AI Researcher, and Writer.",
+    "Curriculum Vitae of Shubhr Gunjan — software engineer building edge AI, real-time systems and developer tools.",
 };
 
 export default function ResumePage() {
   return (
-    <div className="flex flex-col gap-6 w-full max-w-3xl mx-auto px-4 pt-24 pb-16 sm:pt-28">
+    <div className="flex flex-col gap-6 w-full max-w-3xl mx-auto px-4 pt-16 pb-16 sm:pt-24">
       {/* Top Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-border">
         <Link
@@ -73,7 +73,7 @@ export default function ResumePage() {
 
         {/* Section: Education */}
         <section className="mt-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-border pb-1 mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-brand border-b border-border pb-1 mb-3">
             Education
           </h2>
           <div className="flex flex-col gap-3">
@@ -107,19 +107,13 @@ export default function ResumePage() {
 
         {/* Section: Technical Skills */}
         <section className="mt-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-border pb-1 mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-brand border-b border-border pb-1 mb-3">
             Technical Skills
           </h2>
           <div className="flex flex-col gap-1.5 text-xs sm:text-sm">
             <p>
               <strong className="text-foreground">Languages:</strong>{" "}
               <span className="text-muted-foreground">Python, Java, C++, TypeScript, JavaScript, SQL, Bash</span>
-            </p>
-            <p>
-              <strong className="text-foreground">Robotics & Simulation:</strong>{" "}
-              <span className="text-muted-foreground">
-                MuJoCo Physics Engine, MJCF Modeling, Three.js / WebGL, Forward/Inverse Kinematics, Teleoperation Protocols, PPO Reinforcement Learning (mjlab)
-              </span>
             </p>
             <p>
               <strong className="text-foreground">AI & Edge Systems:</strong>{" "}
@@ -138,35 +132,10 @@ export default function ResumePage() {
 
         {/* Section: Experience & Research */}
         <section className="mt-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-border pb-1 mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-brand border-b border-border pb-1 mb-3">
             Experience & Research
           </h2>
           <div className="flex flex-col gap-5">
-            {/* Exp 1 */}
-            <div>
-              <div className="flex justify-between items-baseline">
-                <span className="font-semibold text-sm sm:text-base">
-                  OpenHorizon Labs & Autonomous Systems
-                </span>
-                <span className="text-xs font-mono text-muted-foreground shrink-0">Aug 2026 – Present</span>
-              </div>
-              <div className="flex justify-between items-baseline text-xs text-muted-foreground mb-1.5">
-                <span className="italic">Humanoid Robotics & Simulation Software Engineer</span>
-                <span className="shrink-0 italic">Open Source / Remote</span>
-              </div>
-              <ul className="list-disc list-outside ml-4 flex flex-col gap-1 text-xs sm:text-sm text-muted-foreground">
-                <li>
-                  Architected <strong className="text-foreground">VASIMOV</strong>, an open-source MuJoCo simulation digital twin for the Menlo Asimov 1 humanoid robot, enabling <strong className="text-foreground">60 FPS</strong> browser WebGL visualization with <strong className="text-foreground">&lt;15ms network latency</strong> by streaming binary joint-state transforms over WebSockets.
-                </li>
-                <li>
-                  Engineered a proprioceptive policy inference pipeline converting a <strong className="text-foreground">78-dimensional observation vector</strong> (quaternions, 6-axis IMU, joint encoders) into <strong className="text-foreground">23 joint actuator target angles</strong> at <strong className="text-foreground">50 Hz</strong> using NumPy and Python.
-                </li>
-                <li>
-                  Developed the <strong className="text-foreground">Asimov 3D Web & Mobile Teleoperation Suite</strong> using React Native/Expo and Three.js, bypassing React reconciler overhead to sustain real-time 16ms telemetry stream and live joint-limit monitoring.
-                </li>
-              </ul>
-            </div>
-
             {/* Exp 2 */}
             <div>
               <div className="flex justify-between items-baseline">
@@ -231,7 +200,7 @@ export default function ResumePage() {
 
         {/* Section: Featured Projects */}
         <section className="mt-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-border pb-1 mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-brand border-b border-border pb-1 mb-3">
             Featured Projects
           </h2>
           <div className="flex flex-col gap-4">
@@ -302,7 +271,7 @@ export default function ResumePage() {
 
         {/* Section: Honors & Accolades */}
         <section className="mt-6">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-border pb-1 mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-brand border-b border-border pb-1 mb-3">
             Honors & Accolades
           </h2>
           <div className="flex flex-col gap-2 text-xs sm:text-sm">

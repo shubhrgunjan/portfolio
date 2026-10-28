@@ -1,5 +1,5 @@
 import { Icons } from "@/components/icons";
-import { HomeIcon, NotebookIcon, FileText } from "lucide-react";
+import { FileText, FolderKanban, HomeIcon, NotebookIcon } from "lucide-react";
 import { ReactLight } from "@/components/ui/svgs/reactLight";
 import { NextjsIconDark } from "@/components/ui/svgs/nextjsIconDark";
 import { Typescript } from "@/components/ui/svgs/typescript";
@@ -17,10 +17,10 @@ export const DATA = {
   location: "Delhi NCR / Bihar, India",
   locationLink: "https://www.google.com/maps/place/India",
   description:
-    "Systems & Robotics Software Engineer, AI Researcher, and Writer. Architecting humanoid simulations, edge intelligence engines, and thoughtful digital systems.",
+    "Software engineer building edge AI, real-time systems and tools that solve real frictions. B.Tech ECE student and writer of The Artful Eye on Quora.",
   summary:
-    "I am a software engineer and researcher driven by the convergence of **humanoid robotics**, **physics simulation**, and **edge intelligence**. My work spans developing physics-grounded teleoperation and MuJoCo simulation suites for the Menlo Asimov 1 humanoid robot ([VASIMOV](https://github.com/shubhrgunjan/vasimov)), training proprioceptive RL policies (PPO in mjlab), engineering air-gapped synthetic vector memory systems ([EdgeMed](https://github.com/shubhrgunjan/edgemed)), and building civic intelligence platforms like [Nyaya Flow](https://shubhrgunjan.github.io/nyaya-flow/) — an AI legal navigation system shortlisted at the *Build in AI for India* hackathon.\n\nBeyond engineering, I am a curious observer and writer on [Quora](https://www.quora.com/profile/Shubhr-Gunjan) where I curate *The Artful Eye*, writing on visual aesthetics, architectural proportions, photography, and human cognition. I build open-source tools that solve real frictions — from Linux Cinnamon gesture utilities to high-throughput streaming systems.",
-  avatarUrl: "/shubhr-avatar.png",
+    "I build software that has to hold up in the real world: an air-gapped clinical memory vault ([EdgeMed](https://github.com/shubhrgunjan/edgemed)), a voice-first legal guide for India ([Nyaya Flow](https://shubhrgunjan.github.io/nyaya-flow/), a *Build in AI for India* finalist) and zero-lag display sync for classroom boards. Outside code I curate *The Artful Eye* on [Quora](https://www.quora.com/profile/Shubhr-Gunjan), writing about visual aesthetics and perception.",
+  avatarUrl: "/headshot.jpg",
   skills: [
     { name: "Python", icon: Python },
     { name: "Java", icon: Java },
@@ -32,9 +32,7 @@ export const DATA = {
     { name: "Node.js", icon: Nodejs },
     { name: "PostgreSQL / DuckDB", icon: Postgresql },
     { name: "Docker", icon: Docker },
-    { name: "MuJoCo Simulation", icon: null },
     { name: "Three.js / WebGL", icon: null },
-    { name: "Reinforcement Learning (PPO)", icon: null },
     { name: "Qdrant Vector DB", icon: null },
     { name: "Redis Streams & Pub/Sub", icon: null },
     { name: "Linux Mint / Kernel Automation", icon: null },
@@ -42,6 +40,7 @@ export const DATA = {
   ],
   navbar: [
     { href: "/", icon: HomeIcon, label: "Home" },
+    { href: "/projects", icon: FolderKanban, label: "Projects" },
     { href: "/blog", icon: NotebookIcon, label: "Writing" },
     { href: "/resume", icon: FileText, label: "Resume" },
   ],
@@ -65,7 +64,7 @@ export const DATA = {
         name: "Quora",
         url: "https://www.quora.com/profile/Shubhr-Gunjan",
         icon: Icons.quora,
-        navbar: true,
+        navbar: false,
       },
       email: {
         name: "Send Email",
@@ -77,18 +76,6 @@ export const DATA = {
   },
 
   work: [
-    {
-      company: "OpenHorizon Labs & Autonomous Systems",
-      href: "https://github.com/shubhrgunjan/vasimov",
-      badges: ["Robotics", "Simulation"],
-      location: "Open Source / Remote",
-      title: "Humanoid Robotics & Simulation Engineer",
-      logoUrl: "",
-      start: "Aug 2026",
-      end: "Present",
-      description:
-        "Engineered VASIMOV, a physics-grounded MuJoCo simulation environment for the Menlo Asimov 1 humanoid. Implemented official wire protocol teleoperation, ground-truth telemetry parsing, 78-observation to 23-action locomotion policy inference, and procedural obstacle generation. Developed accompanying 3D Web & React Native teleoperation controllers running on Hermes and native OpenGL ES 3.0 surfaces.",
-    },
     {
       company: "EdgeMed Memory Lab (Code Cubicle 6.0)",
       href: "https://github.com/shubhrgunjan/edgemed",
@@ -156,21 +143,6 @@ export const DATA = {
 
   projects: [
     {
-      title: "Parallax — Phone Video to Walkable Digital Twin",
-      rank: 1,
-      post: "parallax-phone-video-to-digital-twin",
-      accent: "pink",
-      href: "/blog/parallax-phone-video-to-digital-twin",
-      dates: "Oct 2026",
-      active: true,
-      description:
-        "Walk through a building with a phone and get a zero-install web twin: COLMAP/VGGT camera poses, 3D Gaussian Splatting, metric-scaled floor and walls, clickable rooms, search and A* walking directions. Built for Techfest 2026-27 (IIT Bombay).",
-      technologies: ["Python", "3D Gaussian Splatting", "COLMAP", "PyTorch", "Three.js", "FFmpeg"],
-      links: [],
-      image: "",
-      video: "",
-    },
-    {
       title: "reddit-core — Archive Search for Reddit",
       rank: 12,
       post: "reddit-core-archive-search",
@@ -189,67 +161,6 @@ export const DATA = {
         },
       ],
       image: "",
-      video: "",
-    },
-    {
-      title: "VASIMOV — Virtual Asimov 1 in MuJoCo",
-      rank: 2,
-      post: "humanoid-robotics-mujoco-simulation",
-      accent: "sky",
-      href: "https://github.com/shubhrgunjan/vasimov",
-      dates: "Sep 2026 - Present",
-      active: true,
-      description:
-        "Physics-grounded MuJoCo simulation environment, official wire protocol teleoperation, and ground-truth telemetry dashboard for the Menlo Asimov 1 humanoid. Features policy inference (78 obs → 23 act), manual joint overrides, procedural obstacle insertion, and flight data recording.",
-      technologies: [
-        "Python",
-        "MuJoCo",
-        "Three.js",
-        "NumPy",
-        "Robotics Telemetry",
-        "Wire Protocol",
-      ],
-      links: [
-        {
-          type: "Source",
-          href: "https://github.com/shubhrgunjan/vasimov",
-          icon: <Icons.github className="size-3" />,
-        },
-      ],
-      image: "/projects/vasimov.webp",
-      video: "",
-    },
-    {
-      title: "Asimov 3D Web & Mobile Teleoperation Suite",
-      rank: 3,
-      post: "asimov-3d-teleoperation-controller",
-      accent: "violet",
-      href: "https://github.com/shubhrgunjan/asimov-controller-3d",
-      dates: "Oct 2026",
-      active: true,
-      description:
-        "High-performance 3D teleoperation controller for Asimov 1. Direct Three.js ownership avoiding React reconciler overhead, Hermes-optimized OpenGL ES 3.0 rendering, sub-16ms telemetry stream, and live joint limit monitoring.",
-      technologies: [
-        "TypeScript",
-        "React Native",
-        "Expo SDK",
-        "Three.js",
-        "expo-gl",
-        "WebGL",
-      ],
-      links: [
-        {
-          type: "Source (3D Mobile)",
-          href: "https://github.com/shubhrgunjan/asimov-controller-3d",
-          icon: <Icons.github className="size-3" />,
-        },
-        {
-          type: "Web Controller",
-          href: "https://github.com/shubhrgunjan/asimov-web-controller",
-          icon: <Icons.github className="size-3" />,
-        },
-      ],
-      image: "/projects/asimov-controller.webp",
       video: "",
     },
     {

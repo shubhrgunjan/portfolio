@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { BlogExplorer } from "./blog-explorer";
 
 const description =
-  "Engineering deep-dives on humanoid robotics, 3D vision, edge AI and the tools I build, written from the code up.";
+  "Engineering deep-dives on edge AI, real-time systems and the tools I build, written from the code up.";
 
 export const metadata: Metadata = {
   title: "Writing",
@@ -20,7 +20,7 @@ export default function BlogPage() {
   const minutes = posts.reduce((n, p) => n + p.readingTime, 0);
 
   return (
-    <div className="mx-auto max-w-[640px] px-6 pt-32 sm:pt-40">
+    <div className="mx-auto max-w-[640px] px-6 pt-16 sm:pt-24">
       <Reveal>
         <h1 className="text-[2.5rem] font-semibold leading-[1.1] tracking-[-0.035em]">Writing</h1>
         <p className="mt-3 text-[16px] leading-relaxed text-ink-soft">{description}</p>

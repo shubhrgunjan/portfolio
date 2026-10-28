@@ -1,202 +1,185 @@
-import { PillLink, PostRow, ProjectCard, Row, SectionTitle, splitTitle } from "@/components/mono/blocks";
-import { ContributionGraph } from "@/components/mono/contribution-graph";
-import { Toolkit } from "@/components/mono/toolkit";
-import { Reveal } from "@/components/os/motion";
+/* eslint-disable @next/next/no-img-element */
+import BlurFade from "@/components/magicui/blur-fade";
+import BlurFadeText from "@/components/magicui/blur-fade-text";
+import { shortDate } from "@/components/mono/blocks";
+import { ProjectCard } from "@/components/project-card";
+import { MoreLink, SectionHeader } from "@/components/section/section-header";
+import WorkSection from "@/components/section/work-section";
+import { Avatar } from "@/components/ui/avatar";
 import { DATA } from "@/data/resume";
-import { getContributions } from "@/lib/github";
 import { getRankedPosts } from "@/lib/posts";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Download, FileText, MapPin } from "lucide-react";
 import Link from "next/link";
 import Markdown from "react-markdown";
 
+const BLUR_FADE_DELAY = 0.04;
+const FEATURED = 4;
 const projects = [...DATA.projects].sort((a, b) => a.rank - b.rank);
-const FEATURED = 6;
 
-const GITHUB_USER = new URL(DATA.contact.social.GitHub.url).pathname.slice(1);
-
-const year = (s: string) => s.match(/\d{4}/)?.[0] ?? s;
-
-function A({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="link-under text-ink">
-      {children}
-    </a>
-  );
-}
-
-export default async function Page() {
+export default function Page() {
   const posts = getRankedPosts();
-  const contributions = await getContributions(GITHUB_USER);
-  const featured = projects.slice(0, FEATURED);
-  const more = projects.slice(FEATURED);
-  const social = DATA.contact.social;
 
   return (
-    <div className="pt-32 sm:pt-40">
-      {/* ---------------------------------------------------------- INTRO */}
-      <section className="mx-auto max-w-[640px] px-6">
-        <Reveal className="flex items-end justify-between gap-4">
-          <div className="leading-tight">
-            <div className="text-[15px] font-medium">{DATA.name}</div>
-            <div className="text-[14px] text-muted-foreground">Systems &amp; robotics engineer</div>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-20 px-6 pt-16 sm:pt-24">
+      <section id="hero" className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+        <div className="order-2 flex flex-1 flex-col gap-3 md:order-1">
+          <BlurFade delay={BLUR_FADE_DELAY}>
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-xs">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-signal opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-signal" />
+              </span>
+              Edge AI • Real-time systems • Developer tools
+            </div>
+          </BlurFade>
+          <BlurFadeText
+            delay={BLUR_FADE_DELAY * 2}
+            className="font-heading text-4xl font-bold tracking-tight sm:text-5xl"
+            yOffset={8}
+            text={`Hi, I'm ${DATA.name.split(" ")[0]}`}
+          />
+          <BlurFade delay={BLUR_FADE_DELAY * 3}>
+            <p className="max-w-[560px] leading-relaxed text-muted-foreground md:text-lg">{DATA.description}</p>
+          </BlurFade>
+          <BlurFade delay={BLUR_FADE_DELAY * 4}>
+            <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+              <MapPin className="size-3.5 shrink-0 text-brand" />
+              {DATA.location}
+            </div>
+          </BlurFade>
+          <BlurFade delay={BLUR_FADE_DELAY * 5}>
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              <Link
+                href="/resume"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-medium text-brand-fg shadow-[0_6px_20px_-6px] shadow-brand/60 transition-all hover:brightness-110"
+              >
+                <FileText className="size-4" />
+                View resume
+              </Link>
+              <a
+                href="/Shubhr_Gunjan_Resume.pdf"
+                download
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
+              >
+                <Download className="size-4" />
+                Download PDF
+              </a>
+            </div>
+          </BlurFade>
+        </div>
+        <BlurFade delay={BLUR_FADE_DELAY} className="order-1 shrink-0 md:order-2">
+          <div className="group relative">
+            <div className="absolute -inset-1 rounded-full bg-linear-to-tr from-brand via-sky-400 to-emerald-400 opacity-50 blur-md transition duration-500 group-hover:opacity-80" />
+            <Avatar className="relative size-28 rounded-full border-2 border-background ring-2 ring-brand/40 md:size-36">
+              <img alt={`Headshot of ${DATA.name}`} src={DATA.avatarUrl} className="size-full rounded-full object-cover" />
+            </Avatar>
           </div>
-          <span className="flex gap-4 text-[13px] text-muted-foreground">
-            <a href={social.GitHub.url} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-ink">
-              GitHub
-            </a>
-            <a href={social.LinkedIn.url} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-ink">
-              LinkedIn
-            </a>
-          </span>
-        </Reveal>
-
-        <Reveal delay={120}>
-          <h1 className="mt-8 text-balance text-[clamp(2.4rem,7vw,3.5rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
-            I build software for machines that <span className="font-accent text-[1.08em] tracking-[-0.02em]">see and move.</span>
-          </h1>
-          <p className="mt-6 text-[17px] leading-[1.65] text-ink-soft">
-            Humanoid simulation, walkable 3D twins from phone video, air-gapped AI memory and displays that can&apos;t
-            afford to stutter. Every project gets an honest write-up from the code.
-          </p>
-        </Reveal>
-
-        <Reveal delay={180}>
-          <dl className="mt-8 grid grid-cols-[68px_1fr] gap-x-4 sm:grid-cols-[84px_1fr] gap-y-2.5 text-[15px] leading-snug">
-            <dt className="text-muted-foreground">Now</dt>
-            <dd className="text-ink-soft">
-              Building <A href="https://github.com/shubhrgunjan/vasimov">VASIMOV</A>, a MuJoCo twin of the Menlo Asimov 1 humanoid
-            </dd>
-            <dt className="text-muted-foreground">Before</dt>
-            <dd className="text-ink-soft">
-              <A href="https://github.com/shubhrgunjan/edgemed">EdgeMed</A> at Code Cubicle 6.0,{" "}
-              <A href="https://shubhrgunjan.github.io/nyaya-flow/">Nyaya Flow</A> as a Build in AI for India finalist
-            </dd>
-            <dt className="text-muted-foreground">Writing</dt>
-            <dd className="text-ink-soft">
-              <A href={social.Quora.url}>The Artful Eye</A>, essays on visual aesthetics and perception
-            </dd>
-            <dt className="text-muted-foreground">Studying</dt>
-            <dd className="text-ink-soft">B.Tech in Electronics &amp; Communication, class of ’30</dd>
-          </dl>
-        </Reveal>
-
-        <Reveal delay={240} className="mt-9 flex flex-wrap items-center gap-2">
-          <PillLink href={`mailto:${DATA.contact.email}`} external solid>
-            Send a message <ArrowUpRight className="size-3.5" />
-          </PillLink>
-          <PillLink href="/resume">Resume</PillLink>
-        </Reveal>
-
-        {contributions && (
-          <Reveal delay={300} className="mt-16 rounded-[var(--radius)] border border-border p-5 sm:p-6">
-            <ContributionGraph data={contributions} />
-          </Reveal>
-        )}
+        </BlurFade>
       </section>
 
-      {/* ---------------------------------------------------------- WORK */}
-      <section className="mx-auto mt-32 max-w-5xl px-6">
-        <SectionTitle id="work" title="Selected work" aside={`${projects.length} projects`} />
-        <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2">
-          {featured.map((p, i) => (
-            <Reveal key={p.title} delay={(i % 2) * 80}>
-              <ProjectCard title={p.title} dates={p.dates} slug={p.post} accent={p.accent} href={`/blog/${p.post}`} />
-            </Reveal>
+      <section id="about" className="-mt-6 flex flex-col gap-4">
+        <BlurFade delay={BLUR_FADE_DELAY * 6}>
+          <h2 className="text-xl font-bold">About</h2>
+        </BlurFade>
+        <BlurFade delay={BLUR_FADE_DELAY * 7}>
+          <div className="prose max-w-full text-pretty leading-relaxed text-muted-foreground dark:prose-invert prose-a:text-brand prose-a:no-underline hover:prose-a:underline">
+            <Markdown>{DATA.summary}</Markdown>
+          </div>
+        </BlurFade>
+      </section>
+
+      <section id="work" className="flex flex-col gap-6">
+        <BlurFade inView>
+          <h2 className="text-xl font-bold">Experience</h2>
+        </BlurFade>
+        <BlurFade inView>
+          <WorkSection />
+        </BlurFade>
+        <BlurFade inView>
+          <Link href="/resume" className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">
+            Education, skills and the full resume <ChevronRight className="size-4" />
+          </Link>
+        </BlurFade>
+      </section>
+
+      <section id="projects" className="flex flex-col gap-8">
+        <BlurFade inView>
+          <SectionHeader pill="My projects" title="Selected work">
+            Things I&apos;ve built end to end, each with a write-up from the code.
+          </SectionHeader>
+        </BlurFade>
+        <div className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2">
+          {projects.slice(0, FEATURED).map((p, i) => (
+            <BlurFade key={p.title} inView delay={i * 0.06} className="h-full">
+              <ProjectCard
+                href={`/blog/${p.post}`}
+                title={p.title}
+                description={p.description}
+                dates={p.dates}
+                tags={p.technologies}
+                slug={p.post}
+                accent={p.accent}
+              />
+            </BlurFade>
           ))}
         </div>
-
-        <Reveal className="mt-16">
-          <h3 className="mb-2 text-[13px] text-muted-foreground">More projects</h3>
-          <div className="divide-y divide-border">
-            {more.map((p) => {
-              const [name, tagline] = splitTitle(p.title);
-              return (
-                <Row key={p.title} href={`/blog/${p.post}`} title={name} sub={tagline || p.description} meta={year(p.dates)} />
-              );
-            })}
-          </div>
-        </Reveal>
+        <BlurFade inView>
+          <MoreLink href="/projects">All {projects.length} projects &amp; hackathons</MoreLink>
+        </BlurFade>
       </section>
 
-      {/* ---------------------------------------------------------- EXPERIENCE */}
-      <section className="mx-auto mt-32 max-w-[640px] px-6">
-        <SectionTitle id="experience" title="Experience" />
-        <ol className="divide-y divide-border">
-          {DATA.work.map((w, i) => (
-            <Reveal as="li" key={w.company} delay={i * 50} className="grid gap-1 py-6 first:pt-0 sm:grid-cols-[148px_1fr] sm:gap-6">
-              <div className="whitespace-nowrap text-[13px] text-muted-foreground sm:pt-0.5">
-                {w.start} — {w.end}
-              </div>
-              <div>
-                <a href={w.href} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-1">
-                  <span className="text-[15px] font-medium">{w.title}</span>
-                  <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </a>
-                <div className="text-[14px] text-muted-foreground">{w.company}</div>
-                <div className="mt-3 text-[15px] leading-relaxed text-ink-soft">
-                  <Markdown components={{ p: ({ children }) => <p>{children}</p> }}>{w.description}</Markdown>
+      <section id="writing" className="flex flex-col gap-8">
+        <BlurFade inView>
+          <SectionHeader pill="Writing" title="Latest posts">
+            Engineering deep-dives on what I build, plus essays from <em>The Artful Eye</em>.
+          </SectionHeader>
+        </BlurFade>
+        <div className="flex flex-col gap-1">
+          {posts.slice(0, 3).map((post, i) => (
+            <BlurFade key={post.slug} inView delay={i * 0.05}>
+              <Link
+                href={`/blog/${post.slug}`}
+                className="group flex flex-col justify-between gap-1 rounded-xl border border-transparent p-4 transition-colors hover:border-border hover:bg-card sm:flex-row sm:items-baseline sm:gap-6"
+              >
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="font-medium transition-colors group-hover:text-brand">{post.title}</span>
+                  <span className="line-clamp-1 text-sm text-muted-foreground">{post.summary}</span>
                 </div>
-              </div>
-            </Reveal>
+                <time className="shrink-0 font-mono text-xs text-muted-foreground">{shortDate(post.publishedAt)}</time>
+              </Link>
+            </BlurFade>
           ))}
-        </ol>
+        </div>
+        <BlurFade inView>
+          <MoreLink href="/blog">All {posts.length} posts</MoreLink>
+        </BlurFade>
       </section>
 
-      {/* ---------------------------------------------------------- WRITING */}
-      <section className="mx-auto mt-28 max-w-[640px] px-6">
-        <SectionTitle
-          title="Writing"
-          aside={
-            <Link href="/blog" className="transition-colors hover:text-ink">
-              All {posts.length} posts →
-            </Link>
-          }
-        />
-        <Reveal className="divide-y divide-border">
-          {posts.slice(0, 5).map((p) => (
-            <PostRow key={p.slug} post={p} />
-          ))}
-        </Reveal>
-      </section>
-
-      {/* ---------------------------------------------------------- TOOLKIT */}
-      <section className="mx-auto mt-28 max-w-[640px] px-6">
-        <SectionTitle title="Toolkit" />
-        <Reveal>
-          <Toolkit />
-        </Reveal>
-      </section>
-
-      {/* ---------------------------------------------------------- RECOGNITION */}
-      <section className="mx-auto mt-28 max-w-[640px] px-6">
-        <SectionTitle title="Recognition" />
-        <Reveal className="divide-y divide-border">
-          {DATA.hackathons.map((h) => (
-            <Row key={h.title} href={h.links[0]?.href ?? "#"} external title={h.title} sub={h.location} meta={year(h.dates)} />
-          ))}
-        </Reveal>
-
-        <h3 className="mb-2 mt-12 text-[13px] text-muted-foreground">Education</h3>
-        <Reveal className="divide-y divide-border">
-          {DATA.education.map((e) => (
-            <Row key={e.school} href={e.href} external title={e.school} sub={e.degree} meta={e.end} />
-          ))}
-        </Reveal>
-      </section>
-
-      {/* ---------------------------------------------------------- CONTACT */}
-      <section className="mx-auto mt-32 max-w-[640px] px-6">
-        <Reveal>
-          <p className="text-[1.6rem] leading-snug tracking-[-0.02em]">
-            <span className="font-accent text-[1.15em]">Building something that has to work in the real world?</span>{" "}
-            <span className="text-muted-foreground">I&apos;d like to hear about it.</span>
-          </p>
-          <div className="mt-6">
-            <PillLink href={`mailto:${DATA.contact.email}`} external solid>
-              {DATA.contact.email} <ArrowUpRight className="size-3.5" />
-            </PillLink>
+      <section id="contact">
+        <BlurFade inView>
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-12 text-center">
+            <div className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-48 w-2/3 rounded-full bg-brand/20 blur-3xl" />
+            <div className="relative flex flex-col items-center gap-4">
+              <span className="rounded-full border border-brand/30 bg-brand-soft px-3.5 py-1 text-[13px] font-medium text-brand">
+                Contact
+              </span>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Get in touch</h2>
+              <p className="max-w-md text-balance text-muted-foreground">
+                Building something that has to work in the real world? Send me a message, or find me on{" "}
+                <a href={DATA.contact.social.LinkedIn.url} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+                  LinkedIn
+                </a>
+                .
+              </p>
+              <a
+                href={`mailto:${DATA.contact.email}`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-fg shadow-[0_6px_20px_-6px] shadow-brand/60 transition-all hover:brightness-110"
+              >
+                {DATA.contact.email} <ArrowUpRight className="size-4" />
+              </a>
+            </div>
           </div>
-        </Reveal>
+        </BlurFade>
       </section>
     </div>
   );

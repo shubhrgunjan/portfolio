@@ -5,15 +5,15 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------ */
-/*  Mono design tokens                                                 */
-/*  Black, white and greys only. One ink, a short grey scale, hairline */
-/*  dividers, soft radii. Colour never carries meaning here: weight,   */
-/*  size and spacing do.                                               */
+/*  Design tokens                                                      */
+/*  Built on the Magic UI portfolio template: a deep blue-black page,  */
+/*  one violet brand colour for links, focus and highlights, and soft  */
+/*  pastel plates behind the project illustrations.                    */
 /* ------------------------------------------------------------------ */
 
 @theme inline {
   --font-sans: var(--font-body);
-  --font-display: var(--font-body);
+  --font-display: var(--font-heading);
   --font-mono: var(--font-mono-face);
   --font-serif: var(--font-serif-face);
 
@@ -59,6 +59,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-hairline: var(--hairline);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-fg: var(--brand-fg);
 
   --animate-marquee: marquee var(--duration, 40s) linear infinite;
   --animate-blink: blink 1.1s steps(1) infinite;
@@ -76,74 +79,92 @@
 :root {
   --radius: 14px;
 
-  --paper: #fdfdfd;
-  --ink: #141414;
-  --ink-soft: #5c5c5c;
-  --chrome: #f4f4f4;   /* card surface */
-  --chrome-2: #ebebeb; /* pressed / hover surface */
-  --hairline: rgb(0 0 0 / 0.08);
+  --paper: #fbfbfd;
+  --ink: #12131a;
+  --ink-soft: #4a4d5c;
+  --chrome: #f2f3f7;   /* card surface */
+  --chrome-2: #e8eaf1; /* pressed / hover surface */
+  --hairline: rgb(18 19 26 / 0.08);
   --desk: var(--chrome);
   --desk-ink: var(--ink);
-  --dot: rgb(20 20 20 / 0.7);
-  --uv: var(--ink);
+  --dot: rgb(18 19 26 / 0.6);
 
-  /* The old accent names survive as a quiet grey ramp, so every
-     illustration and callout renders in greyscale without forking it. */
-  --pink: #ececec;
-  --magenta: #dcdcdc;
-  --sky: #e6e6e6;
-  --violet: #e0e0e0;
-  --lime: #e9e9e9;
-  --orange: #e3e3e3;
-  --mint: #dedede;
-  --signal: #8a8a8a;
+  --brand: #6d4fe0;
+  --brand-soft: rgb(109 79 224 / 0.1);
+  --brand-fg: #ffffff;
+  --uv: var(--brand);
+
+  /* pastel plates for the project illustrations */
+  --pink: #ffd6e4;
+  --magenta: #f6c9f0;
+  --sky: #cfe6ff;
+  --violet: #ded6ff;
+  --lime: #e2f5bf;
+  --orange: #ffdcc2;
+  --mint: #c9f2e3;
+  --signal: #10b981;
 
   --background: var(--paper);
   --foreground: var(--ink);
-  --card: var(--paper);
+  --card: #ffffff;
   --card-foreground: var(--ink);
-  --popover: var(--paper);
+  --popover: #ffffff;
   --popover-foreground: var(--ink);
   --primary: var(--ink);
   --primary-foreground: var(--paper);
   --secondary: var(--chrome);
   --secondary-foreground: var(--ink);
   --muted: var(--chrome);
-  --muted-foreground: #8a8a8a;
+  --muted-foreground: #6b6f80;
   --accent: var(--chrome);
   --accent-foreground: var(--ink);
-  --destructive: #3a3a3a;
-  --border: #e6e6e6;
-  --input: #dcdcdc;
-  --ring: var(--ink);
+  --destructive: #dc2626;
+  --border: #e3e5ec;
+  --input: #d9dce5;
+  --ring: var(--brand);
 
-  /* contribution graph: empty → most active */
-  --g0: #ececec;
-  --g1: #cdcdcd;
-  --g2: #9e9e9e;
-  --g3: #5e5e5e;
-  --g4: #141414;
+  /* contribution graph: empty → most active, in the brand hue */
+  --g0: #ecebf5;
+  --g1: #cfc6f7;
+  --g2: #a593f0;
+  --g3: #7c62e6;
+  --g4: #4f35c2;
 }
 
 .dark {
-  --paper: #0c0c0c;
-  --ink: #ededed;
-  --ink-soft: #a3a3a3;
-  --chrome: #161616;
-  --chrome-2: #1f1f1f;
-  --hairline: rgb(255 255 255 / 0.08);
-  --dot: rgb(237 237 237 / 0.5);
+  --paper: #0a0b10;
+  --ink: #eceef4;
+  --ink-soft: #a7abbb;
+  --chrome: #12141b;
+  --chrome-2: #1a1d26;
+  --hairline: rgb(255 255 255 / 0.07);
+  --dot: rgb(236 238 244 / 0.45);
 
-  --muted-foreground: #737373;
-  --destructive: #d4d4d4;
-  --border: #242424;
-  --input: #2e2e2e;
+  --brand: #a593ff;
+  --brand-soft: rgb(165 147 255 / 0.12);
+  --brand-fg: #0a0b10;
 
-  --g0: #1c1c1c;
-  --g1: #3a3a3a;
-  --g2: #686868;
-  --g3: #a3a3a3;
-  --g4: #ededed;
+  --pink: #f4c4d6;
+  --magenta: #e9bde4;
+  --sky: #bcd8f5;
+  --violet: #cfc5fb;
+  --lime: #d4eab0;
+  --orange: #f3cdb2;
+  --mint: #bde6d6;
+  --signal: #34d399;
+
+  --card: #10121a;
+  --popover: #12141b;
+  --muted-foreground: #8a8fa3;
+  --destructive: #f87171;
+  --border: #20232d;
+  --input: #2a2e3a;
+
+  --g0: #171a23;
+  --g1: #2f2a5c;
+  --g2: #4c3f9a;
+  --g3: #7a66d9;
+  --g4: #b3a5ff;
 }
 
 /* Accent channel kept for compatibility: set data-accent="sky" etc. */
@@ -157,8 +178,8 @@
 
 @utility font-display {
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.035em;
+  font-weight: 650;
+  letter-spacing: -0.03em;
   line-height: 1.05;
 }
 
@@ -230,17 +251,22 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "ss01", "cv11";
+    font-feature-settings: "kern";
     text-rendering: optimizeLegibility;
   }
 
+  h1, h2 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.025em;
+  }
+
   ::selection {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--brand);
+    color: var(--brand-fg);
   }
 
   :focus-visible {
-    outline: 2px solid var(--ink);
+    outline: 2px solid var(--brand);
     outline-offset: 3px;
     border-radius: 6px;
   }
@@ -259,9 +285,14 @@
   }
 }
 
-/* Project illustrations are drawn ink-on-paper; in dark mode they sit as
-   slightly dimmed light plates, like photographs on a dark wall. */
-.dark .art { filter: brightness(0.86) contrast(1.02); }
+/* Project illustrations are drawn ink-on-pastel; in dark mode they sit as
+   slightly dimmed plates so they don't glare against the page. */
+.dark .art { filter: brightness(0.9) saturate(0.95); }
+
+@utility font-heading {
+  font-family: var(--font-heading);
+  letter-spacing: -0.03em;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Article typography                                                 */

@@ -1,6 +1,6 @@
 # Shubhr Gunjan — Portfolio [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fshubhrgunjan%2Fportfolio)
 
-> Personal portfolio and research publications of **Shubhr Gunjan** — Systems & Robotics Software Engineer, AI Researcher, and Writer. Architecting humanoid simulations, edge intelligence engines, and thoughtful digital systems.
+> Personal portfolio and writing of **Shubhr Gunjan**: software engineer building edge AI, real-time systems and developer tools, and writer of *The Artful Eye* on Quora.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/)
@@ -11,10 +11,10 @@
 
 ## 🌟 Highlights
 
-- **SG//OS "Calibration" design system:** an original visual language drawn from robotics and vision work (calibration checkerboards, ArUco fiducials, colour charts, dimension lines, live telemetry), with ultraviolet + lime tokens, Bricolage Grotesque/Geist type and a matching dark mode. Documented in [docs/DESIGN.md](docs/DESIGN.md) and live at `/design`.
+- **Design:** built on the Magic UI portfolio template (dock nav, blur-fade motion, card grid) with a violet-on-blue-black palette, Bricolage Grotesque + Plus Jakarta Sans type and animated vector project art. Documented in [docs/DESIGN.md](docs/DESIGN.md).
 - **14 animated vector illustrations:** every project has a hand-drawn SVG figure instead of a screenshot; figures animate only while on screen and speed up on hover.
 - **Motion:** headline rise, rotating verb, scroll reveals, decode labels, count-ups, a spring-animated nav and a scroll-progress bar, all respecting `prefers-reduced-motion`.
-- **13 code-grounded deep-dives:** every project post was written from the actual repository (real excerpts, measured numbers only), ranked best-first: Parallax, VASIMOV, the Asimov 3D teleop suite, UIKey, EdgeMed, AndroPlay, Nyaya Flow and more.
+- **Code-grounded deep-dives:** every project post was written from the actual repository (real excerpts, measured numbers only): UIKey, EdgeMed, AndroPlay, Nyaya Flow and more.
 - **In-site blog editor at `/write`:** password-protected, live MDX preview, component toolbar, image drag-and-drop, local autosave, and one-click publish that commits to GitHub so Vercel redeploys. See [docs/WRITING.md](docs/WRITING.md).
 - **Blog features:** search and tag filter, featured ranking, generated halftone covers, sticky table of contents, reading progress, related posts and an RSS feed at `/rss.xml`.
 

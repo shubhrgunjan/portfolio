@@ -1,61 +1,42 @@
-# Mono — design system
+# Design system
 
-Black, white and greys only. Hierarchy comes from size, weight and spacing; colour never carries meaning.
-The site should feel like a well-set page: one calm reading column, generous whitespace, quiet chrome.
+The site is built on the **Magic UI portfolio template** (the one the portfolio started from on `main`): a single
+672px column, a floating dock at the bottom, blur-fade motion and a card grid for projects. On top of it:
 
-References (principles, not pixels): lookap entries *Minimal Portfolio Refresh* (floating dark pill nav,
-muted project grid) and *Minimal Portfolio With AI Imagery* (single 600px column,
-near-white page, tidy type scale).
-
-Dark is the default theme for new visitors; the toggle in the nav remembers a visitor's choice.
-
-## Tokens (`src/app/globals.css`)
+## Colour (`src/app/globals.css`)
 
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `paper` | `#FDFDFD` | `#0C0C0C` | page background |
-| `ink` | `#141414` | `#EDEDED` | headings, primary text, solid buttons |
-| `ink-soft` | `#5C5C5C` | `#A3A3A3` | body copy |
-| `muted-foreground` | `#8A8A8A` | `#737373` | meta, labels, secondary lines |
-| `chrome` | `#F4F4F4` | `#161616` | cards, plates, inputs, code |
-| `chrome-2` | `#EBEBEB` | `#1F1F1F` | hover / pressed surfaces |
-| `border` | `#E6E6E6` | `#242424` | hairline dividers |
+| `background` | `#FBFBFD` | `#0A0B10` | page |
+| `card` | `#FFFFFF` | `#10121A` | cards, dock, contact panel |
+| `foreground` | `#12131A` | `#ECEEF4` | text |
+| `muted-foreground` | `#6B6F80` | `#8A8FA3` | secondary text |
+| `border` | `#E3E5EC` | `#20232D` | hairlines |
+| `brand` | `#6D4FE0` | `#A593FF` | links, primary buttons, pills, focus, selection, graph |
+| `brand-soft` | brand at 10–12% | | pill and hover fills |
+| `brand-fg` | `#FFFFFF` | `#0A0B10` | text on a brand button |
 
-The old accent names (`pink`, `sky`, `lime`…) are kept as a light grey ramp so the project illustrations and
-any older component render in greyscale without being forked. Radius is `14px` for plates, `8px` for inner
-frames, full for pills.
+Project illustrations sit on pastel plates (`pink`, `sky`, `violet`, `lime`, `orange`, `mint`, `magenta`), slightly
+dimmed in dark mode. The GitHub graph ramps `--g0…--g4` through the brand hue.
 
-**Type:** Geist for everything (600 for headings, `-0.035em` tracking), Geist Mono only for code and step
-numbers, Instrument Serif *italic* for one accent phrase per view at most.
+## Type
 
-| Role | Size |
-| --- | --- |
-| Page title | 40px / 1.1 |
-| Lede | 21–22px, muted, with an optional serif-italic phrase in ink |
-| Section title | 17px semibold |
-| Body | 16px / 1.7 |
-| Rows, meta | 15px title, 13–14px muted |
+- **Bricolage Grotesque** for `h1`/`h2` and card titles (`font-heading`).
+- **Plus Jakarta Sans** for everything else.
+- **JetBrains Mono** for dates, code and small meta.
+- Instrument Serif italic stays available (`font-accent`) for article pull quotes.
 
-## Layout
+## Structure
 
-- Text sections sit in a 640px column; the work grid widens to 1024px.
-- **Nav:** a floating `#161616` pill, fixed top-centre in both themes, with a spring-sliding highlight and a
-  lighter inset Contact button. A paper-to-transparent fade sits under it so content never collides with it.
-- **Work:** label row (name in ink, tagline in grey, date right) above a `chrome` plate; the illustration is
-  framed inside it with a soft shadow, like a print on a mount. Remaining projects are list rows.
-- **Toolkit:** monochrome brand glyphs (`simple-icons`, drawn in `currentColor`) on 40px `chrome` tiles,
-  grouped by area; the name shows in a tooltip on hover or focus. Wordmark-only logos are left out.
-- **Contribution graph:** last year of public GitHub activity on the same `--g0…--g4` grey ramp.
-- **Rows:** title + one-line muted summary, meta on the right, an ↗ that appears on hover, grey hover fill.
+- **Home is short:** hero with headshot, about, experience, 4 featured projects, 3 latest posts, contact.
+  Every section ends with a link to the page that holds the rest (`/projects`, `/blog`, `/resume`).
+- **`/projects`:** every project card, the GitHub contribution graph and the hackathon timeline.
+- **Dock:** pages, then socials (hidden under `sm`, where they live in the footer), then the theme switch.
+- Lab projects (Parallax, VASIMOV, the Asimov teleop suite) are not public yet: their posts are `draft: true`
+  and they are left out of `src/data/resume.tsx`.
 
 ## Motion
 
-From lookap's presets: enter is fade-up 12px (520ms, `cubic-bezier(.2,.8,.2,1)`, staggered 50–80ms), hover
-changes colour or surface only (150ms), press scales to 0.98 (120ms). Project illustrations keep their
-ambient loops and pause off-screen. Under `prefers-reduced-motion` (which many desktops report by default) reveals become a plain fade and the
-illustrations keep drawing and blinking; only spin, sway and path travel stop.
-
-## Not yet migrated
-
-`/design` (the SG//OS style guide) and `/write` still use the old components; they render in greyscale through
-the tokens but keep square frames. The OG images still use the old palette.
+Blur-fade (6px blur, 6px rise, 400ms) on load for the hero and on scroll for later sections, the dock's
+magnification, card lift on hover and the illustrations' ambient loops. Under `prefers-reduced-motion` the CSS
+loops tone down (no spin, sway or path travel); fades still run.

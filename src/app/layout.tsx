@@ -1,17 +1,23 @@
 import { SITE_URL } from "@/lib/site";
+import { FlickeringGrid } from "@/components/magicui/flickering-grid";
 import { SiteFooter } from "@/components/mono/site-footer";
-import { SiteNav } from "@/components/mono/site-nav";
+import Navbar from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DATA } from "@/data/resume";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Bricolage_Grotesque, Instrument_Serif, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const body = Geist({
+const body = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-body",
+});
+
+const heading = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-heading",
 });
 
 // One serif, italic only, for the occasional accent phrase.
@@ -22,7 +28,7 @@ const serif = Instrument_Serif({
   variable: "--font-serif-face",
 });
 
-const mono = Geist_Mono({
+const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono-face",
 });
@@ -73,15 +79,29 @@ export default function RootLayout({
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
           body.variable,
+          heading.variable,
           serif.variable,
           mono.variable
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <TooltipProvider delayDuration={0}>
-            <SiteNav email={DATA.contact.email} />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[120px] overflow-hidden">
+              <FlickeringGrid
+                className="h-full w-full"
+                squareSize={2}
+                gridGap={3}
+                color="var(--brand)"
+                maxOpacity={0.35}
+                style={{
+                  maskImage: "linear-gradient(to bottom, black, transparent)",
+                  WebkitMaskImage: "linear-gradient(to bottom, black, transparent)",
+                }}
+              />
+            </div>
             <main className="relative min-h-dvh">{children}</main>
             <SiteFooter />
+            <Navbar />
           </TooltipProvider>
         </ThemeProvider>
       </body>

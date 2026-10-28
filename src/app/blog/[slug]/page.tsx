@@ -75,7 +75,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   }).replace(/</g, "\\u003c");
 
   return (
-    <div data-accent={post.accent} className="pt-32 sm:pt-40">
+    <div data-accent={post.accent} className="pt-16 sm:pt-24">
       <script
         type="application/ld+json"
         suppressHydrationWarning
