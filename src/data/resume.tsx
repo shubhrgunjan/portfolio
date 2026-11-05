@@ -143,6 +143,32 @@ export const DATA = {
 
   projects: [
     {
+      title: "Relume — Design DNA for AI Agents",
+      rank: 3,
+      post: "relume-design-dna-for-ai-agents",
+      accent: "violet",
+      href: "https://relume.shubhrgunjan.me/",
+      dates: "Nov 2026",
+      active: true,
+      description:
+        "Measures a live website's colours, typography, layout and motion, then compiles its design language into a reusable agent skill. Served over MCP, with a growing reference catalogue and checks against the source.",
+      technologies: ["TypeScript", "Playwright", "MCP", "Design Tokens"],
+      links: [
+        {
+          type: "Website",
+          href: "https://relume.shubhrgunjan.me/",
+          icon: <Icons.globe className="size-3" />,
+        },
+        {
+          type: "Source",
+          href: "https://github.com/shubhrgunjan/relume",
+          icon: <Icons.github className="size-3" />,
+        },
+      ],
+      image: "",
+      video: "",
+    },
+    {
       title: "reddit-core — Archive Search for Reddit",
       rank: 12,
       post: "reddit-core-archive-search",

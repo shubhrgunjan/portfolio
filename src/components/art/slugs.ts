@@ -1,5 +1,6 @@
 /** Slugs that have a vector illustration in ./index.tsx (kept server-safe for lookups). */
 export const ART_SLUGS = [
+  "relume-design-dna-for-ai-agents",
   "parallax-phone-video-to-digital-twin",
   "humanoid-robotics-mujoco-simulation",
   "asimov-3d-teleoperation-controller",

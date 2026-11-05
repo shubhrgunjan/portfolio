@@ -1,0 +1,70 @@
+---
+title: "Relume: Turning a Website's Design Language into an Agent Skill"
+publishedAt: "2026-11-05"
+author: "Shubhr Gunjan"
+summary: "How Relume measures a live site's tokens, components, layout and motion, compiles them into a reusable agent skill, and checks what an agent builds against the source."
+kicker: "Dev Tools / Design Systems"
+tags: ["typescript", "playwright", "mcp", "design-tokens", "motion", "ai-agents"]
+accent: "violet"
+featured: 3
+repo: "https://github.com/shubhrgunjan/relume"
+demo: "https://relume.shubhrgunjan.me/"
+---
+
+A screenshot can show an AI coding agent a site's appearance. It leaves out how that site behaves: the timing of an introduction, where a scroll reveal starts, the easing on a hover, or how typography changes between viewports.
+
+**Relume** measures that design language in the browser and compiles it into a reusable agent skill. The goal is to give an agent enough evidence to build new pages with the same visual vocabulary, using original content and compositions.
+
+## From a live site to design DNA
+
+The web pipeline starts with Playwright. A probe is injected before page scripts run, recording style changes, animation keyframes and timing. Desktop capture includes loading, scrolling, hovering over distinct interactive elements and keyboard focus. Tablet, mobile and dark-mode harvests provide additional layout and token evidence, while Chrome DevTools Protocol supplies stylesheet text.
+
+Inference turns those observations into `dna.json`: colours with roles, typography, spacing, shape, layout, components and motion. `src/infer/dna.ts` assembles these dimensions and adds section blueprints, reference crops and capture-quality information.
+
+This matters because a design system includes relationships. A colour needs a role; a component needs its hover and focus states; an animation needs its trigger, target and timing.
+
+## Compile the evidence into a skill
+
+`src/skill/compile.ts` turns the DNA into a directory an agent can use. It includes:
+
+- `SKILL.md` with the design language, setup and workflow.
+- References for tokens, components, layout, blueprints and motion.
+- CSS tokens, a Tailwind v4 theme and DTCG token JSON.
+- Motion CSS, JavaScript and a complete motion index.
+- Reference screenshots, section crops and a lint script.
+
+The compiler checks that the captured composition is usable before producing a skill. Empty or collapsed captures should not become confident instructions for a building agent.
+
+The reference material guides the language of a new page. Source logos, imagery, product names and copy are excluded from builds; reported commercial fonts come with an open substitute.
+
+## Serve it through MCP
+
+The MCP interface lets an agent search the catalogue, start an extraction, inspect DNA, retrieve skill files, view references and check a candidate page. Crawls run as jobs, so clients can poll their status while the browser does the heavier work.
+
+The core CLI exposes the same workflow:
+
+```sh
+npm run cli -- extract https://linear.app --pages 4
+npm run cli -- check linear.app http://localhost:3000
+npm run cli -- compare linear.app stripe.com
+```
+
+Each extraction is stored in the catalogue, alongside checks and recorded pitfalls, so later builds can reuse the evidence.
+
+## Check the result without overstating the score
+
+Verification measures a candidate with the same pipeline and compares palette coverage, typography, spacing, radii, layout and recurring motion behaviour. Reports include dimension scores and fixes ordered by severity.
+
+A measurement pass requires every dimension to reach 85 with no severe finding. That is a rule for these measurements, not a guarantee of visual fidelity. Finished artwork and choreography still need side-by-side review. Incomplete comparisons remain ungraded, with null scores and `pass: false`.
+
+Saved reports also carry the scorer version and SHA-256 fingerprints of the evaluator and both DNA files. If the source or evaluator changes during a check, the result is invalidated. The point is to keep evidence traceable as the tools evolve.
+
+## Extending the idea to motion
+
+The repository also contains **Relume Motion**, a separate study, composition, render and comparison workflow for video. Its tools expose reference shots, blocking, motion, sound design and scene rendering. A local studio supports visual review across iterations.
+
+The same limitation applies there: a reconstruction score cannot judge creative originality. Motion sequences and rendered compositions need to be watched, and stylistic measurements need to be interpreted alongside that review.
+
+Relume brings these workflows together around a practical loop: measure a reference, make the evidence usable by an agent, build something new, and inspect where the result still falls short.
+
+<RepoCard repo="shubhrgunjan/relume" description="Measure a live site's design DNA, compile an agent skill and check new pages against the source." />

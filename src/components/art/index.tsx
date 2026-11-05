@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
+import { RelumeArt } from "./relume";
 import { ParallaxArt, VasimovArt } from "./robotics";
 import { AndroPlayArt, AsimovTeleopArt, EdgeMedArt, ExelSnapArt, NyayaArt, UIKeyArt } from "./systems";
 import { ArtfulEyeArt, EchoLoopArt, MintZoomArt, QuoraFormatterArt, RedditCoreArt, TjflowArt } from "./tools";
@@ -9,6 +10,7 @@ type Art = ComponentType<{ accent?: string }>;
 
 /** Project / post slug → animated vector illustration. */
 export const ART: Record<string, Art> = {
+  "relume-design-dna-for-ai-agents": RelumeArt,
   "parallax-phone-video-to-digital-twin": ParallaxArt,
   "humanoid-robotics-mujoco-simulation": VasimovArt,
   "asimov-3d-teleoperation-controller": AsimovTeleopArt,
